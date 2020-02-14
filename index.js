@@ -6,6 +6,7 @@ const AWS = require("aws-sdk");
 
 const constructFormData = require("./helpers");
 
+app.set("view engine", "pug");
 app.use(bodyParser.json({ strict: false }));
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
@@ -24,10 +25,52 @@ const params = {
   TableName: FORMS_TABLE
 };
 
-app.get("/", function(req, res) {
-  res.send("Hello world!");
+// Load controllers
+const formController = require("./controllers/form");
+
+/**
+ * GET /
+ */
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to WebriQ Forms API!" });
 });
 
+app.put("/test/:id", (req, res) => {
+  const { siteUrls } = req.body;
+  console.log("siteUrls", siteUrls);
+  console.log("req.params.id", req.params.id);
+
+  var params = {
+    TableName: FORMS_TABLE,
+    Key: {
+      id: req.params.id
+    },
+    UpdateExpression: "SET #formNonces = list_append(#formNonces, :vals)",
+    ExpressionAttributeNames: {
+      "#formNonces": "formNonces"
+    },
+    ExpressionAttributeValues: {
+      ":vals": typeof siteUrls === "string" ? [siteUrls] : siteUrls
+    },
+    ReturnValues: "UPDATED_NEW"
+  };
+
+  dynamoDb.update(params, function(err, data) {
+    if (err) console.log(err);
+    else console.log(data);
+
+    return res.json(data);
+  });
+});
+
+/**
+ * GET /js/initForms
+ */
+app.get("/js/initForms", formController.getJSLib);
+
+/**
+ * GET /forms
+ */
 app.get("/forms", (req, res) => {
   dynamoDb.scan(params, (error, result) => {
     if (error) {
@@ -49,7 +92,7 @@ app.get("/forms", (req, res) => {
 app.get("/forms/:id", function(req, res) {
   dynamoDb.get(
     {
-      ...params,
+      TableName: FORMS_TABLE,
       Key: {
         id: req.params.id
       }

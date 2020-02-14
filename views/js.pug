@@ -1,0 +1,176 @@
+script.
+  var url = location.host;
+  var webriqFormsApiUrl = "#{process.env.WEBRIQ_API_URL}";
+  var getFormApiUrl = webriqFormsApiUrl + url + "/url";
+  var webriqFormsDocsUrl = "#{docsUrl}";
+  var forms = document.querySelectorAll("form[webriq]");
+  var postFormApiUrl = "";
+  var sitekey = "";
+  var dataId = 0;
+  var thankYou = location.origin;
+  var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+  let sendingLabelShown = false;
+
+  getAjax(getFormApiUrl)
+    .then(data => {
+      var counter = 1;
+      formIds = data;
+
+      if (recaptchaDivs.length) {
+        generateRecaptcha(formIds[dataId].recaptcha.key);
+      }
+
+      assignFormHandlers(formIds);
+    })
+    .catch(err => {  
+      console.error(err);
+    });
+
+  function assignFormHandlers(formIds) {
+    forms.forEach(function(singleForm, singleFormIndex) {
+      singleForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        // When testing, data-form-id attribute must be specified
+        if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
+          console.error(`WebriQ Forms: When testing forms in localhost, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
+          return;
+        }
+
+        // Prevents submission to existing form when multiple forms are present
+        if (singleFormIndex !== 0 && ! singleForm.hasAttribute("data-form-id") ) {
+          console.error(`WebriQ Forms: When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
+          return;
+        }
+
+        const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
+        const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
+
+        if (singleForm.hasAttribute("data-thankyou-url")) {
+          thankYou = singleForm.getAttribute("data-thankyou-url");
+        } else {
+          thankYou += "/thank-you";
+        }
+
+        const nonces = JSON.parse('!{formNonces}');
+        const getNonceForFormId = (nonces, formId) => nonces.find(form => form.formId === formId) && nonces.find(form => form.formId === formId).nonce;
+
+        if (! sendingLabelShown) {
+          // Disable submit and show message that form is being submitted
+          e.srcElement.querySelectorAll("[type='submit']")[0].disabled = true;
+
+          if (document.querySelectorAll('.errorMessage').length) {
+            var infoMessage = document.querySelectorAll('.infoMessage')[0];
+          } else {
+            var infoMessage = document.createElement("div");
+          }
+
+          infoMessage.className = 'infoMessage';
+          infoMessage.style.cssText = 'display: block;color:#004085;background-color:#cce5ff;border-color:#b8daff;margin:10px;padding:10px;border-radius:3px;';
+          infoMessage.innerHTML = `Sending form data<span id="wait">.</span>`;
+          singleForm.before(infoMessage);
+
+          var dots = window.setInterval( function() {
+            var wait = document.getElementById("wait");
+            if ( wait.innerHTML.length > 2 ) {
+              wait.innerHTML = ".";
+            } else {
+              wait.innerHTML += ".";
+            }
+          }, 500);
+        }
+
+        sendingLabelShown = true;
+
+        postAjax(postFormApiUrl, singleForm, getNonceForFormId(nonces, formId))
+          .then(data => {
+            window.location.href = thankYou;
+          })
+          .catch(err => {
+            e.srcElement.querySelectorAll("[type='submit']")[0].disabled = false;
+            document.querySelector('.infoMessage').setAttribute('style', "display: none;");
+            clearInterval(dots);
+            sendingLabelShown = false;
+
+            if (document.querySelectorAll('.errorMessage').length) {
+              var errmsg = document.querySelectorAll('.errorMessage')[0];
+            } else {
+              var errmsg = document.createElement("div");
+            }
+            errmsg.className = 'errorMessage';
+            errmsg.style.cssText = 'color:#D8000C;background-color:#FFBABA;margin:10px;padding:10px;border-radius:3px;';
+            errmsg.innerHTML = (err && err.message) || `✖ Something went wrong submitting form data! Please refresh page and try again...`;
+            singleForm.before(errmsg);
+
+            console.error(err);
+          });
+      });
+    });
+  }
+
+  function generateRecaptcha(sitekey) {
+    let scriptTag = document.createElement("script");
+    let headTag = document.querySelector("head");
+    scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js");
+    scriptTag.setAttribute("async", "");
+    scriptTag.setAttribute("defer", "");
+    headTag.parentNode.insertBefore(scriptTag, headTag.nextSibling);
+    let id = 0;
+    recaptchaDivs.forEach(div => {
+      scriptRecaptcha = document.createElement("div");
+      if (id < recaptchaDivs.length) {
+        scriptRecaptcha.setAttribute("data-id", id);
+        id++;
+      }
+      scriptRecaptcha.setAttribute("class", "g-recaptcha");
+      scriptRecaptcha.setAttribute("data-sitekey", sitekey);
+      div.appendChild(scriptRecaptcha);
+    });
+  }
+
+  function getAjax(url) {
+    return new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", url);
+      xhr.onload = function() {
+        if (this.status >= 200 && this.status < 300) {
+          var response = JSON.parse(xhr.response);
+          resolve(response);
+        } else {
+          reject({ status: this.status, statusText: xhr.statusText });
+        }
+      };
+      xhr.onerror = function() {
+        reject({ status: this.status, statusText: xhr.statusText });
+      };
+      xhr.send();
+    });
+  }
+
+  function postAjax(url, data, nonce) {
+    return new Promise((resolve, reject) => {
+      var grepID = data.querySelector('.g-recaptcha');
+
+      if (grepID && ! grecaptcha.getResponse(grepID.dataset.id).length) {
+        reject({ message: `✖ Please check "I'm not a robot" below to submit the form!` });
+        return;
+      }
+
+      var formData = new FormData(data);
+      formData.set("_nonce", nonce);
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.onload = function() {
+        if (this.status === 201) {
+          var response = JSON.parse(xhr.response);
+          resolve(response);
+        } else {
+          reject({ status: this.status, statusText: xhr.statusText });
+        }
+      };
+      xhr.onerror = function() {
+        reject({ status: this.status, statusText: xhr.statusText });
+      };
+      xhr.send(formData);
+    });
+  }
