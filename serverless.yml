@@ -39,6 +39,26 @@ functions:
     events:
       - http: ANY /
       - http: "ANY {proxy+}"
+  createForm:
+    handler: index.handler
+    events:
+      - http: "POST /forms"
+  getForms:
+    handler: index.handler
+    events:
+      - http: "GET /forms"
+  getForm:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{proxy+}"
+  updateForm:
+    handler: index.handler
+    events:
+      - http: "PUT /forms/{proxy+}"
+  deleteForm:
+    handler: index.handler
+    events:
+      - http: "DELETE /forms/{proxy+}"
 
 plugins:
   - serverless-offline

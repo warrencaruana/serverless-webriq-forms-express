@@ -117,6 +117,7 @@ app.delete("/forms/:id", (req, res) => {
  * PUT /forms/:id
  */
 app.put("/forms/:id", (req, res) => {
+  const { name } = req.body;
   const params = {
     TableName: FORMS_TABLE,
     Key: {
@@ -127,7 +128,7 @@ app.put("/forms/:id", (req, res) => {
       "#name": "name"
     },
     ExpressionAttributeValues: {
-      ":n": req.body.name
+      ":n": name
     },
     ReturnValues: "UPDATED_NEW"
   };
@@ -138,7 +139,7 @@ app.put("/forms/:id", (req, res) => {
       res.status(400).json({ error: "Could not create form!" });
     }
 
-    res.status(200).json(data);
+    res.status(200).json({ name });
   });
 });
 
