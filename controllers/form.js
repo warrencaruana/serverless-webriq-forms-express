@@ -1,7 +1,12 @@
 const JavaScriptObfuscator = require("javascript-obfuscator");
 const AWS = require("aws-sdk");
+const flatten = require("lodash.flatten");
+const uniq = require("lodash.uniq");
+const uuid = require("uuid/v4");
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
+const FORMNONCES_TABLE = process.env.FORMNONCES_TABLE;
+console.log("FORMS_TABLE", FORMS_TABLE);
 const IS_OFFLINE = process.env.IS_OFFLINE;
 let dynamoDb;
 if (IS_OFFLINE === "true") {
@@ -45,22 +50,25 @@ exports.initLib = async (req, res) => {
       }
     };
 
-    dynamoDb.scan(params, (error, result) => {
-      if (error) {
-        console.log(error);
-        return {
-          error: true,
-          message: `Internal error retrieving form data!`,
-          data: initialFormData
-        };
-      }
+    await dynamoDb
+      .scan(params, (error, result) => {
+        if (error) {
+          console.log(error);
+          return {
+            error: true,
+            message: `Internal error retrieving form data!`,
+            data: initialFormData
+          };
+        }
 
-      if (result.Items) {
-        forms = result.Items;
-      }
-    });
+        if (result.Items) {
+          forms = result.Items;
+        }
+      })
+      .promise();
   }
 
+  console.log("forms", forms);
   if (!forms || forms.length < 1) {
     return {
       error: true,
@@ -69,47 +77,75 @@ exports.initLib = async (req, res) => {
     };
   }
 
-  // let formNonces = [];
-  // let siteUrls = [];
+  let formNonces = [];
+  let siteUrls = [];
+
+  const getTomorrowsDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return tomorrow;
+  };
 
   // // Create _nonces
-  // forms.forEach(async form => {
-  //   const currentNonce = generateNonce();
+  forms.forEach(async form => {
+    const currentNonce = generateNonce();
+    const tomorrowDate = getTomorrowsDate();
 
-  //   let data = {
-  //     token: currentNonce,
-  //     expiresAt: moment()
-  //       .add("1", "days")
-  //       .toDate()
-  //   };
+    let data = {
+      _id: uuid(),
+      _formId: form && form._id,
+      token: currentNonce,
+      expiresAt: tomorrowDate.getTime() // timestamp
+    };
 
-  //   // Push new _nonces
-  //   formNonces.push({
-  //     formId: form._id.toString(),
-  //     nonce: currentNonce
-  //   });
+    // Push new _nonces and siteUrls
+    try {
+      formNonces.push({
+        formId: form && form._id,
+        nonce: currentNonce
+      });
 
-  //   // Push new site urls
-  //   siteUrls.push(form.siteUrls);
+      siteUrls.push(form.siteUrls);
+    } catch (err) {
+      // unable to push nonce or siteUrls
+      return {
+        error: true,
+        message: "Unable to push nonce or siteUrls!",
+        data: []
+      };
+    }
 
-  //   Forms.updateOne(
-  //     { _id: form._id },
-  //     {
-  //       $addToSet: {
-  //         validNonces: [data]
-  //       }
-  //     },
-  //     (err, result) => console.log(err, result)
-  //   );
-  // });
+    const params = {
+      TableName: FORMNONCES_TABLE,
+      Item: data
+    };
 
-  // siteUrls = _.uniq(_.flatten(siteUrls));
+    dynamoDb.put(params, error => {
+      if (error) {
+        console.log(error);
+        return {
+          error: true,
+          message: "Unable to generate nonce for form!",
+          data: []
+        };
+      }
+
+      console.log(`Successfully created nonce: ${currentNonce}`);
+    });
+  });
+
+  siteUrls = uniq(flatten(siteUrls));
 
   return {
-    forms,
-    referer,
-    formNonces: [],
-    siteUrls: []
+    error: false,
+    message: "Successfully init WebriQ Form requirements",
+    data: {
+      forms,
+      referer,
+      formNonces,
+      siteUrls
+    }
   };
 };
 
@@ -120,17 +156,17 @@ exports.getJSLib = async (req, res) => {
     data: { formNonces, siteUrls, forms, referer }
   } = await this.initLib(req, res);
 
-  // if (error) {
-  //   return res.type(".js").send(`console.error("${message}");`);
-  // }
+  if (error) {
+    return res.type(".js").send(`console.error("${message}");`);
+  }
 
-  // if (!error && forms.length < 1) {
-  //   return res
-  //     .type(".js")
-  //     .send(
-  //       `console.error("WebriQ Forms: Site is not registered and/or '${referer}' is not present in its 'siteUrls'. When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${process.env.APP_URL}/docs for more info.");`
-  //     );
-  // }
+  if (!error && forms.length < 1) {
+    return res
+      .type(".js")
+      .send(
+        `console.error("WebriQ Forms: Site is not registered and/or '${referer}' is not present in its 'siteUrls'. When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${process.env.APP_URL}/docs for more info.");`
+      );
+  }
 
   res.render(
     "js",

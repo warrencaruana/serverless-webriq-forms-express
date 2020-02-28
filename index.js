@@ -10,6 +10,7 @@ app.set("view engine", "pug");
 app.use(bodyParser.json({ strict: false }));
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
+const FORMNONCES_TABLE = process.env.FORMNONCES_TABLE;
 const IS_OFFLINE = process.env.IS_OFFLINE;
 let dynamoDb;
 if (IS_OFFLINE === "true") {
@@ -50,7 +51,7 @@ app.put("/test/:id", (req, res) => {
       "#formNonces": "formNonces"
     },
     ExpressionAttributeValues: {
-      ":vals": typeof siteUrls === "string" ? [siteUrls] : siteUrls
+      ":vals": typeof siteUrls !== "object" ? [siteUrls] : siteUrls
     },
     ReturnValues: "UPDATED_NEW"
   };
@@ -84,6 +85,26 @@ app.get("/forms", (req, res) => {
       res.status(404).json({ error: "Forms not found!" });
     }
   });
+});
+
+app.get("/formnonces", (req, res) => {
+  dynamoDb.scan(
+    {
+      TableName: FORMNONCES_TABLE
+    },
+    (error, result) => {
+      if (error) {
+        console.log(error);
+        res.status(400).json({ error: "Forms not found!" });
+      }
+
+      if (result) {
+        res.json(result.Items);
+      } else {
+        res.status(404).json({ error: "Forms not found!" });
+      }
+    }
+  );
 });
 
 /**
