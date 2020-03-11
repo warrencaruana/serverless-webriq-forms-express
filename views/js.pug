@@ -1,9 +1,8 @@
 script.
   var url = location.host;
-  var webriqFormsApiUrl = "#{process.env.WEBRIQ_API_URL}";
+  var webriqFormsApiUrl = "#{process.env.WEBRIQ_FORMS_API_URL}";
   var getFormApiUrl = webriqFormsApiUrl + url + "/url";
   var webriqFormsDocsUrl = "#{docsUrl}";
-  var forms = document.querySelectorAll("form[webriq]");
   var postFormApiUrl = "";
   var sitekey = "";
   var dataId = 0;
@@ -13,6 +12,7 @@ script.
 
   getAjax(getFormApiUrl)
     .then(data => {
+      console.log('data', data)
       var counter = 1;
       formIds = data;
 
@@ -22,14 +22,19 @@ script.
 
       assignFormHandlers(formIds);
     })
-    .catch(err => {  
+    .catch(err => {
       console.error(err);
     });
 
   function assignFormHandlers(formIds) {
+    const forms = document.querySelectorAll("form[webriq]");
+
     forms.forEach(function(singleForm, singleFormIndex) {
+      console.log(singleForm, singleFormIndex)
       singleForm.addEventListener("submit", function(e) {
         e.preventDefault();
+
+        console.log('here')
 
         // When testing, data-form-id attribute must be specified
         if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
@@ -47,7 +52,7 @@ script.
         const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
 
         if (singleForm.hasAttribute("data-thankyou-url")) {
-          thankYou = singleForm.getAttribute("data-thankyou-url");
+          thankYou = singleForm.getAttribute("action") || singleForm.getAttribute("data-thankyou-url");
         } else {
           thankYou += "/thank-you";
         }

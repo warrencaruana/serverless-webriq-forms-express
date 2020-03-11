@@ -3,13 +3,18 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
 const AWS = require("aws-sdk");
+const get = require("lodash.get");
+const multer = require("multer");
 
-const constructFormData = require("./helpers");
+const constructFormData = require("./helpers").constructFormData;
+const constructFormSubmissionData = require("./helpers")
+  .constructFormSubmissionData;
 
+app.use(bodyParser.urlencoded({ extended: false })).use(bodyParser.json());
 app.set("view engine", "pug");
-app.use(bodyParser.json({ strict: false }));
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
+const FORM_SUBMISSIONS_TABLE = process.env.FORM_SUBMISSIONS_TABLE;
 const FORMNONCES_TABLE = process.env.FORMNONCES_TABLE;
 const IS_OFFLINE = process.env.IS_OFFLINE;
 let dynamoDb;
@@ -85,6 +90,49 @@ app.get("/forms", (req, res) => {
       res.status(404).json({ error: "Forms not found!" });
     }
   });
+});
+
+/**
+ * GET /forms/:url/url
+ */
+app.get("/forms/:url/url", async (req, res) => {
+  console.log("req.params.url", req.params.url);
+  let forms = [];
+
+  const params = {
+    TableName: FORMS_TABLE,
+    FilterExpression: "contains (siteUrls, :siteUrls)",
+    ExpressionAttributeValues: {
+      ":siteUrls": req.params.url
+    }
+  };
+
+  await dynamoDb
+    .scan(params, (error, result) => {
+      if (error) {
+        console.log(error);
+        return {
+          error: true,
+          message: `Internal error retrieving forms data!`,
+          data: null
+        };
+      }
+
+      if (result.Items) {
+        forms = result.Items;
+      }
+    })
+    .promise();
+
+  const formsData = forms.map(form => ({
+    id: form._id,
+    name: form.name,
+    recaptcha: {
+      key: get(form, "recaptcha.key", null)
+    }
+  }));
+
+  return res.status(200).json(formsData);
 });
 
 app.get("/formnonces", (req, res) => {
@@ -205,6 +253,63 @@ app.put("/forms/:id", (req, res) => {
 
     res.status(200).json({ name });
   });
+});
+
+/**
+ * POST /forms
+ */
+app.post("/forms/:id/submissions", (req, res) => {
+  // @todo: validation goes here
+
+  const [error, data] = constructFormSubmissionData({
+    ...req.body,
+    formId: req.params.id
+  });
+  console.log("data", data);
+
+  if (error) {
+    res.status(400).json(error);
+  }
+
+  const params = {
+    TableName: FORM_SUBMISSIONS_TABLE,
+    Item: data
+  };
+
+  dynamoDb.put(params, error => {
+    if (error) {
+      console.log(error);
+      res.status(400).json({ error: "Could not create form submissions!" });
+    }
+
+    res.status(201).json(data);
+  });
+});
+
+/**
+ * GET /forms/:id/submissions
+ */
+app.get("/forms/:id/submissions", (req, res) => {
+  dynamoDb.scan(
+    {
+      TableName: FORM_SUBMISSIONS_TABLE,
+      Key: {
+        id: req.params.id
+      }
+    },
+    (error, result) => {
+      if (error) {
+        console.log(error);
+        res.status(400).json({ error: "Forms submissions not found!" });
+      }
+
+      if (result) {
+        res.json(result.Items);
+      } else {
+        res.status(404).json({ error: "Forms submissions not found!" });
+      }
+    }
+  );
 });
 
 module.exports.handler = serverless(app);

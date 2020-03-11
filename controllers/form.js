@@ -171,7 +171,7 @@ exports.getJSLib = async (req, res) => {
   res.render(
     "js",
     {
-      apiUrl: process.env.WEBRIQ_API_URL,
+      apiUrl: process.env.WEBRIQ_API_URL || "http://localhost:3000",
       formNonces: JSON.stringify(formNonces),
       docsUrl: process.env.WEBRIQ_API_DOCS_URL || process.env.APP_URL + "/docs"
     },

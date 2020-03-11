@@ -33,8 +33,23 @@ provider:
     USERS_TABLE: ${self:custom.tableName}
     FORMS_TABLE: ${self:custom.WF_Forms_TableName}
     FORMNONCES_TABLE: ${self:custom.WF_FormNonces_TableName}
-    SUBMISSIONS_TABLE: ${self:custom.WF_FormSubmissions_TableName}
+    FORM_SUBMISSIONS_TABLE: ${self:custom.WF_FormSubmissions_TableName}
     APP_URL: https://forms.webriq.com
+    APP_DEFAULT_RECAPTCHA_KEY: 6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8
+    APP_DEFAULT_RECAPTCHA_SECRET: 6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4
+    WEBRIQ_FORMS_API_URL_DEV: http://localhost:3000/forms/
+    WEBRIQ_FORMS_API_URL:
+      {
+        "Fn::Join":
+          [
+            "",
+            [
+              " https://",
+              { "Ref": "ApiGatewayRestApi" },
+              ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage}/forms",
+            ],
+          ],
+      }
 
 functions:
   app:
