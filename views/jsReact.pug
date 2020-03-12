@@ -1,33 +1,67 @@
 script.
-  var url = location.host;
+  var url = url ? url : location.host;
   var webriqFormsApiUrl = "http://localhost:3000/forms/"
   var getFormApiUrl = webriqFormsApiUrl + url + "/url";
   var webriqFormsDocsUrl = "#{docsUrl}";
   var postFormApiUrl = "";
   var sitekey = "";
   var dataId = 0;
-  var thankYou = location.origin;
-  var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
-  let sendingLabelShown = false;
+  var sendingLabelShown = false;
+  var isWebriQFormLoaded = true
 
-  getAjax(getFormApiUrl)
-    .then(data => {
-      var counter = 1;
-      formIds = data;
+  webriqFormInit();
 
-      if (recaptchaDivs.length) {
-        generateRecaptcha(formIds[dataId].recaptcha.key);
-      }
+  function webriqFormInit() {
+    getAjax(getFormApiUrl)
+      .then(data => {
+        var counter = 1;
+        formIds = data;
 
-      assignFormHandlers(formIds);
-    })
-    .catch(err => {
-      console.error(err);
-    });
+        var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+        recaptchaDivs.forEach(div => {
+          if (! div.getAttribute("sitekey")) {
+            div.setAttribute("sitekey", formIds[dataId].recaptcha.key);
+          }
+        });
+
+        if (recaptchaDivs.length) {
+          loadRecaptcha(formIds[dataId].recaptcha.key);
+        }
+
+        assignFormHandlers(formIds);
+      })
+      .catch(err => {
+        console.error(err);
+      });
+    localStorage.setItem("lastWebriQRecaptchaId", 0);
+  }
+
+  function webriqFormRefresh() {
+    getAjax(getFormApiUrl)
+      .then(data => {
+        var counter = 1;
+        formIds = data;
+
+        var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+        recaptchaDivs.forEach(div => {
+          if (! div.getAttribute("sitekey")) {
+            div.setAttribute("sitekey", formIds[dataId].recaptcha.key);
+          }
+        });
+
+        if (recaptchaDivs.length) {
+          renderCaptcha();
+        }
+
+        assignFormHandlers(formIds);
+      })
+      .catch(err => {
+        console.error(err);
+      });
+  }
 
   function assignFormHandlers(formIds) {
-    const forms = document.querySelectorAll("form[webriq]");
-
+    var forms = document.querySelectorAll("form[webriq]");
     forms.forEach(function(singleForm, singleFormIndex) {
       singleForm.addEventListener("submit", function(e) {
         e.preventDefault();
@@ -47,8 +81,9 @@ script.
         const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
         const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
 
-        if (singleForm.getAttribute("action") || singleForm.hasAttribute("data-thankyou-url")) {
-          thankYou = singleForm.getAttribute("action") || singleForm.getAttribute("data-thankyou-url");
+        var thankYou = location.origin;
+        if (singleForm.hasAttribute("data-thankyou-url")) {
+          thankYou = singleForm.getAttribute("data-thankyou-url");
         } else {
           thankYou += "/thank-you";
         }
@@ -67,7 +102,7 @@ script.
           }
 
           infoMessage.className = 'infoMessage';
-          infoMessage.style.cssText = 'display: block;color:#004085;background-color:#cce5ff;border-color:#b8daff;margin:10px;padding:10px;border-radius:3px;';
+          infoMessage.style.cssText = 'display: block;color:#004085;background-color:#cce5ff;border-color:#b8daff;margin:10px 0;padding:10px;border-radius:3px;';
           infoMessage.innerHTML = `Sending form data<span id="wait">.</span>`;
           singleForm.before(infoMessage);
 
@@ -99,7 +134,7 @@ script.
               var errmsg = document.createElement("div");
             }
             errmsg.className = 'errorMessage';
-            errmsg.style.cssText = 'color:#D8000C;background-color:#FFBABA;margin:10px;padding:10px;border-radius:3px;';
+            errmsg.style.cssText = 'color:#D8000C;background-color:#FFBABA;margin:10px 0;padding:10px;border-radius:3px;';
             errmsg.innerHTML = (err && err.message) || `✖ Something went wrong submitting form data! Please refresh page and try again...`;
             singleForm.before(errmsg);
 
@@ -109,23 +144,34 @@ script.
     });
   }
 
-  function generateRecaptcha(sitekey) {
-    let scriptTag = document.createElement("script");
-    let headTag = document.querySelector("head");
-    scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js");
-    scriptTag.setAttribute("async", "");
-    scriptTag.setAttribute("defer", "");
-    headTag.parentNode.insertBefore(scriptTag, headTag.nextSibling);
-    let id = 0;
+  function loadRecaptcha(sitekey) {
+    if (!document.getElementById("webriqFormRecaptcha")) {
+      let scriptTag = document.createElement("script");
+      let headTag = document.querySelector("head");
+      scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js?onload=renderCaptcha&render=explicit");
+      scriptTag.setAttribute("async", "");
+      scriptTag.setAttribute("defer", "");
+      scriptTag.setAttribute("id", "webriqFormRecaptcha");
+      headTag.parentNode.insertBefore(scriptTag, headTag.nextSibling);
+    }
+  }
+
+  function renderCaptcha() {
+    var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+
     recaptchaDivs.forEach(div => {
-      scriptRecaptcha = document.createElement("div");
-      if (id < recaptchaDivs.length) {
-        scriptRecaptcha.setAttribute("data-id", id);
-        id++;
+      // Explicitly call our recaptcha to render back
+      var currentSiteKey = div.getAttribute("sitekey");
+
+      if (grecaptcha) {
+        let widgetId;
+        try {
+          widgetId = grecaptcha.render(div, { sitekey: currentSiteKey })
+          div.setAttribute("data-recaptcha-id", widgetId);
+        } catch(err) {
+          grecaptcha.reset(div.getAttribute("data-recaptcha-id"))
+        }
       }
-      scriptRecaptcha.setAttribute("class", "g-recaptcha");
-      scriptRecaptcha.setAttribute("data-sitekey", sitekey);
-      div.appendChild(scriptRecaptcha);
     });
   }
 
@@ -150,9 +196,9 @@ script.
 
   function postAjax(url, data, nonce) {
     return new Promise((resolve, reject) => {
-      var grepID = data.querySelector('.g-recaptcha');
+      var grepID = data && data.querySelector('.webriq-recaptcha');
 
-      if (grepID && ! grecaptcha.getResponse(grepID.dataset.id).length) {
+      if (grepID && ! grecaptcha.getResponse(grepID.dataset.id || grepID.dataset.recaptchaId).length) {
         reject({ message: `✖ Please check "I'm not a robot" below to submit the form!` });
         return;
       }

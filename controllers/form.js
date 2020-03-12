@@ -124,9 +124,6 @@ exports.getFormsById = (req, res) => {
  */
 exports.postForms = (req, res) => {
   // @todo: validation goes here
-
-  return res.json({});
-
   const data = constructFormData(req.body);
   const params = {
     TableName: FORMS_TABLE,
@@ -197,10 +194,7 @@ exports.deleteFormsById = (req, res) => {
   );
 };
 
-/**
- * GET /js/initForms
- */
-exports.getJSLib = async (req, res) => {
+exports.prepareJSLib = async (req, res, viewFile = "js") => {
   const {
     error,
     message,
@@ -222,7 +216,7 @@ exports.getJSLib = async (req, res) => {
   console.log(process.env.WEBRIQ_API_URL || "http://localhost:3000");
 
   res.render(
-    "js",
+    viewFile,
     {
       apiUrl: process.env.WEBRIQ_API_URL || "http://localhost:3000",
       formNonces: JSON.stringify(formNonces),
@@ -374,6 +368,20 @@ exports.initLib = async (req, res) => {
       siteUrls
     }
   };
+};
+
+/**
+ * GET /js/initForms
+ */
+exports.getJSLib = async (req, res) => {
+  return this.prepareJSLib(req, res);
+};
+
+/**
+ * GET /js/initReactForms
+ */
+exports.getReactJSLib = async (req, res) => {
+  return this.prepareJSLib(req, res, "jsReact");
 };
 
 const generateNonce = () => {

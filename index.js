@@ -46,7 +46,6 @@ app.get("/", (req, res) => {
 /**
  * Forms
  */
-app.get("/js/initForms", form.getJSLib);
 app.get("/forms", form.getForms);
 app.get("/forms/:url/url", form.getFormsByURL);
 app.get("/forms/:id", form.getFormsById);
@@ -72,5 +71,11 @@ app.delete(
  * Nonces
  */
 app.get("/formnonces", nonce.getNonces);
+
+/**
+ * JS Library
+ */
+app.get("/js/initForms", form.getJSLib);
+app.get("/js/initReactForms", form.getReactJSLib);
 
 module.exports.handler = serverless(app);

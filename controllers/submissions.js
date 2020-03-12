@@ -49,14 +49,11 @@ exports.getFormSubmissions = (req, res) => {
 
 /**
  * POST /forms/:id/submissions
+ *
+ * @todo: Fix payload bug
  */
 exports.postFormSubmissions = (req, res) => {
   // @todo: validation goes here
-  console.log("typeof req.body", typeof req.body);
-  console.log("req.body", req.body);
-
-  return res.json({});
-
   const [error, data] = constructFormSubmissionData({
     ...req.body,
     formId: req.params.formId
