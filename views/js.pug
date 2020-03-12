@@ -1,6 +1,6 @@
 script.
   var url = location.host;
-  var webriqFormsApiUrl = "#{process.env.WEBRIQ_FORMS_API_URL}";
+  var webriqFormsApiUrl = "http://localhost:3000/forms/"
   var getFormApiUrl = webriqFormsApiUrl + url + "/url";
   var webriqFormsDocsUrl = "#{docsUrl}";
   var postFormApiUrl = "";
@@ -34,8 +34,6 @@ script.
       singleForm.addEventListener("submit", function(e) {
         e.preventDefault();
 
-        console.log('here')
-
         // When testing, data-form-id attribute must be specified
         if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
           console.error(`WebriQ Forms: When testing forms in localhost, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
@@ -51,7 +49,7 @@ script.
         const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
         const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
 
-        if (singleForm.hasAttribute("data-thankyou-url")) {
+        if (singleForm.getAttribute("action") || singleForm.hasAttribute("data-thankyou-url")) {
           thankYou = singleForm.getAttribute("action") || singleForm.getAttribute("data-thankyou-url");
         } else {
           thankYou += "/thank-you";

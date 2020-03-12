@@ -4,7 +4,8 @@ custom:
   WF_Forms_TableName: "wf-forms-table-${self:provider.stage}"
   WF_FormSubmissions_TableName: "wf-submissions-table-${self:provider.stage}"
   WF_FormNonces_TableName: "wf-form_nonces-table-${self:provider.stage}"
-  tableName: "users-table-${self:provider.stage}"
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
   dynamodb:
     stages:
       - ${self:provider.stage}
@@ -30,7 +31,6 @@ provider:
         - { "Fn::GetAtt": ["FormsDynamoDBTable", "Arn"] }
         - { "Fn::GetAtt": ["SubmissionsDynamoDBTable", "Arn"] }
   environment:
-    USERS_TABLE: ${self:custom.tableName}
     FORMS_TABLE: ${self:custom.WF_Forms_TableName}
     FORMNONCES_TABLE: ${self:custom.WF_FormNonces_TableName}
     FORM_SUBMISSIONS_TABLE: ${self:custom.WF_FormSubmissions_TableName}
@@ -46,7 +46,7 @@ provider:
             [
               " https://",
               { "Ref": "ApiGatewayRestApi" },
-              ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage}/forms",
+              ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage}/",
             ],
           ],
       }
@@ -57,6 +57,24 @@ functions:
     events:
       - http: ANY /
       - http: "ANY {proxy+}"
+
+  getFormSubmissions:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{formId}/submissions"
+  getFormSubmission:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{formId}/submissions/{proxy+}"
+  createFormSubmission:
+    handler: index.handler
+    events:
+      - http: "POST /forms/{formId}/submissions"
+  deleteFormSubmission:
+    handler: index.handler
+    events:
+      - http: "DELETE /forms/{formId}/submissions/{proxy+}"
+
   createForm:
     handler: index.handler
     events:
@@ -69,6 +87,7 @@ functions:
     handler: index.handler
     events:
       - http: "GET /forms/{proxy+}"
+
   updateForm:
     handler: index.handler
     events:
@@ -77,6 +96,15 @@ functions:
     handler: index.handler
     events:
       - http: "DELETE /forms/{proxy+}"
+
+  getJSLib:
+    handler: index.handler
+    events:
+      - http: "GET /js/initForms"
+  getReactJSLib:
+    handler: index.handler
+    events:
+      - http: "GET /js/initReactForms"
 
 plugins:
   - serverless-offline
@@ -101,11 +129,15 @@ resources:
       Properties:
         TableName: ${self:custom.WF_FormSubmissions_TableName}
         AttributeDefinitions:
+          - AttributeName: _form
+            AttributeType: S
           - AttributeName: _id
             AttributeType: S
         KeySchema:
           - AttributeName: _id
             KeyType: HASH
+          - AttributeName: _form
+            KeyType: String
         BillingMode: PAY_PER_REQUEST
 
     FormNoncesDynamoDBTable:
@@ -119,17 +151,3 @@ resources:
           - AttributeName: _id
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
-
-    UsersDynamoDBTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: userId
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-        TableName: ${self:custom.tableName}
