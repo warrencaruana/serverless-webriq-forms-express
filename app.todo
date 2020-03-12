@@ -1,6 +1,14 @@
-Convert WebriQ Forms API
+Todos:
 
-- Get forms
-- Get form submissions
+ ☐ [BUG] Fix request body not converted to JSON
+ ☐ Migrate all existing functionalities to serverless platform
+ ☐ Validation
+ ☐ Update other fields for PUT forms
+ ☐ Making sure all fields in mongodb are migrated proerly here
 
-Migrate existing data to dynamodb
+For LIVE:
+
+ ☐ Migration of old data to dynamodb
+ ☐ Testing with WebriQ App
+ ☐ Migration of domain of forms.webriq.com to AWS
+ ☐ Create AWS account
