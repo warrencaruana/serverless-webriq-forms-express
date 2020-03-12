@@ -4,6 +4,7 @@ const flatten = require("lodash.flatten");
 const uniq = require("lodash.uniq");
 const uuid = require("uuid/v4");
 const get = require("lodash.get");
+const formData = require("express-form-data");
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
 const FORMNONCES_TABLE = process.env.FORMNONCES_TABLE;

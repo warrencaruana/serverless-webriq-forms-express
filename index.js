@@ -5,12 +5,22 @@ const app = express();
 const AWS = require("aws-sdk");
 const get = require("lodash.get");
 const multer = require("multer");
+const formData = require("express-form-data");
+const os = require("os");
 
 const constructFormData = require("./helpers").constructFormData;
 const constructFormSubmissionData = require("./helpers")
   .constructFormSubmissionData;
 
-app.use(bodyParser.urlencoded({ extended: false })).use(bodyParser.json());
+const options = {
+  uploadDir: os.tmpdir(),
+  autoClean: true
+};
+
+app.use(formData.parse(options));
+app.use(formData.format());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 app.set("view engine", "pug");
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
