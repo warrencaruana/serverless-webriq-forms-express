@@ -1,8 +1,4 @@
 const AWS = require("aws-sdk");
-const flatten = require("lodash.flatten");
-const uniq = require("lodash.uniq");
-const uuid = require("uuid/v4");
-const get = require("lodash.get");
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
 const FORM_SUBMISSIONS_TABLE = process.env.FORM_SUBMISSIONS_TABLE;
@@ -49,8 +45,6 @@ exports.getFormSubmissions = (req, res) => {
 
 /**
  * POST /forms/:id/submissions
- *
- * @todo: Fix payload bug
  */
 exports.postFormSubmissions = (req, res) => {
   // @todo: validation goes here
@@ -58,7 +52,6 @@ exports.postFormSubmissions = (req, res) => {
     ...req.body,
     formId: req.params.formId
   });
-  console.log("data", data);
 
   if (error) {
     res.status(400).json(error);

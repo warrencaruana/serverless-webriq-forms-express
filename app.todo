@@ -1,14 +1,40 @@
 Todos:
 
- ☐ [BUG] Fix request body not converted to JSON
+ ✔ [BUG] Fix request body not converted to JSON @done (20-03-12 17:40)
  ☐ Migrate all existing functionalities to serverless platform
  ☐ Validation
  ☐ Update other fields for PUT forms
- ☐ Making sure all fields in mongodb are migrated proerly here
+ ☐ Making sure all fields in mongodb are migrated properly here
 
 For LIVE:
 
+ ☐ Protect API endpoints
  ☐ Migration of old data to dynamodb
  ☐ Testing with WebriQ App
  ☐ Migration of domain of forms.webriq.com to AWS
  ☐ Create AWS account
+
+Things To Ensure:
+ ☐ Automate testing of WebriQ Forms via POSTMAN. Part of workflow and bug fixing in the future.
+ ☐ 
+
+Bugs:
+
+# Reintroduce:
+
+getFormSubmissions:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{formId}/submissions"
+  getFormSubmission:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{formId}/submissions/{id}"
+  createFormSubmission:
+    handler: index.handler
+    events:
+      - http: "POST /forms/{formId}/submissions"
+  deleteFormSubmission:
+    handler: index.handler
+    events:
+      - http: "DELETE /forms/{formId}/submissions/{id}"

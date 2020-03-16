@@ -1,10 +1,10 @@
-const JavaScriptObfuscator = require("javascript-obfuscator");
 const AWS = require("aws-sdk");
+const { validationResult } = require("express-validator");
 const flatten = require("lodash.flatten");
 const uniq = require("lodash.uniq");
 const uuid = require("uuid/v4");
 const get = require("lodash.get");
-const formData = require("express-form-data");
+const JavaScriptObfuscator = require("javascript-obfuscator");
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
 const FORMNONCES_TABLE = process.env.FORMNONCES_TABLE;
@@ -54,7 +54,6 @@ exports.getForms = (req, res) => {
  * GET /forms/:url/url
  */
 exports.getFormsByURL = async (req, res) => {
-  console.log("req.params.url", req.params.url);
   let forms = [];
 
   const params = {
@@ -124,7 +123,15 @@ exports.getFormsById = (req, res) => {
  * POST /forms
  */
 exports.postForms = (req, res) => {
-  // @todo: validation goes here
+  console.log("here creating forms");
+  const errors = validationResult(req);
+  console.log("errors", errors.array());
+
+  if (!errors.isEmpty()) {
+    res.status(422).json({ errors: errors.array() });
+    return;
+  }
+
   const data = constructFormData(req.body);
   const params = {
     TableName: FORMS_TABLE,
@@ -148,18 +155,25 @@ exports.postForms = (req, res) => {
  */
 exports.putUpdateForms = (req, res) => {
   const { name } = req.body;
+  console.log("name", name);
+
+  let UpdateExpressionList = [];
+  let ExpressionAttributeNames = {};
+  let ExpressionAttributeValues = {};
+  if (name) {
+    ExpressionAttributeNames["#name"] = "name";
+    ExpressionAttributeValues[":n"] = name;
+    UpdateExpressionList.push("#name = :n");
+  }
+
   const params = {
     TableName: FORMS_TABLE,
     Key: {
       _id: req.params.id
     },
-    UpdateExpression: "set #name = :n",
-    ExpressionAttributeNames: {
-      "#name": "name"
-    },
-    ExpressionAttributeValues: {
-      ":n": name
-    },
+    UpdateExpression: "SET " + UpdateExpressionList.join(","),
+    ExpressionAttributeNames,
+    ExpressionAttributeValues,
     ReturnValues: "UPDATED_NEW"
   };
 

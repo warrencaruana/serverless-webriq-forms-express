@@ -46,7 +46,20 @@ exports.constructFormSubmissionData = function(data) {
     {
       _id,
       _form: formId,
-      payload: data
+      payload: get(data, ""),
+      attachments: []
     }
   ];
+};
+
+exports.removeSiteProtocols = urls => {
+  if (urls && Array.isArray(urls)) {
+    return urls.map(url => url.replace(/^https?\:\/\//i, ""));
+  }
+
+  if (urls && (typeof urls === "string" || urls instanceof String)) {
+    return urls.replace(/^https?\:\/\//i, "");
+  }
+
+  return urls;
 };

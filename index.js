@@ -37,6 +37,9 @@ if (IS_OFFLINE === "true") {
   dynamoDb = new AWS.DynamoDB.DocumentClient();
 }
 
+// Load middlewares
+const formMiddleware = require("./middleware/form");
+
 const params = {
   TableName: FORMS_TABLE
 };
@@ -59,7 +62,7 @@ app.get("/", (req, res) => {
 app.get("/forms", form.getForms);
 app.get("/forms/:url/url", form.getFormsByURL);
 app.get("/forms/:id", form.getFormsById);
-app.post("/forms", form.postForms);
+app.post("/forms", formMiddleware.createForm, form.postForms);
 app.put("/forms/:id", form.putUpdateForms);
 app.delete("/forms/:id", form.deleteFormsById);
 

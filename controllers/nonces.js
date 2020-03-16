@@ -1,8 +1,4 @@
 const AWS = require("aws-sdk");
-const flatten = require("lodash.flatten");
-const uniq = require("lodash.uniq");
-const uuid = require("uuid/v4");
-const get = require("lodash.get");
 
 const FORMS_TABLE = process.env.FORMS_TABLE;
 const FORM_SUBMISSIONS_TABLE = process.env.FORM_SUBMISSIONS_TABLE;
