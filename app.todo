@@ -1,9 +1,15 @@
 Todos:
 
  ✔ [BUG] Fix request body not converted to JSON @done (20-03-12 17:40)
+ ✔ Validate via nonce form submission @done (20-03-18 10:05)
  ☐ Migrate all existing functionalities to serverless platform
+   ☐ Construct data and sanitize field properly since there's no mongoose model
+   ✔ Form submission uploads @done (20-03-18 17:02)
+   ☐ Update other fields for PUT forms
+   ✔ Sending email @done (20-03-18 17:02)
+   ☐ Sending webhooks
+   ☐ JWT authentication
  ☐ Validation
- ☐ Update other fields for PUT forms
  ☐ Making sure all fields in mongodb are migrated properly here
 
 For LIVE:
