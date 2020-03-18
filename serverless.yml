@@ -36,8 +36,16 @@ provider:
     FORMNONCES_TABLE: ${self:custom.WF_FormNonces_TableName}
     FORM_SUBMISSIONS_TABLE: ${self:custom.WF_FormSubmissions_TableName}
     APP_URL: https://forms.webriq.com
+    APP_STAGE: ${self:custom.stage}
     APP_DEFAULT_RECAPTCHA_KEY: 6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8
     APP_DEFAULT_RECAPTCHA_SECRET: 6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4
+    CLOUDINARY_CLOUD_NAME: dokfyxs4e
+    CLOUDINARY_API_KEY: 151834162875131
+    CLOUDINARY_API_SECRET: 3cxSNFjBmJRNjOrOVBweYgx-ZgQ
+    MAILGUN_USER: postmaster@mg.foodhunt.today
+    MAILGUN_PASSWORD: 4e38973f926ff10889b69de7ebaf2d56
+    MAILTRAP_USER: 44314661af65a2928
+    MAILTRAP_PASSWORD: 093bfd51adeb42
     WEBRIQ_FORMS_API_URL_DEV: http://localhost:3000/forms/
     WEBRIQ_FORMS_API_URL:
       {
@@ -113,9 +121,9 @@ resources:
       Properties:
         TableName: ${self:custom.WF_FormSubmissions_TableName}
         AttributeDefinitions:
-          - AttributeName: _form
-            AttributeType: S
           - AttributeName: _id
+            AttributeType: S
+          - AttributeName: _form
             AttributeType: S
         KeySchema:
           - AttributeName: _id
@@ -129,9 +137,9 @@ resources:
       Properties:
         TableName: ${self:custom.WF_FormNonces_TableName}
         AttributeDefinitions:
-          - AttributeName: _id
+          - AttributeName: token
             AttributeType: S
         KeySchema:
-          - AttributeName: _id
+          - AttributeName: token
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST

@@ -1,4 +1,3 @@
-const AWS = require("aws-sdk");
 const { validationResult } = require("express-validator");
 const flatten = require("lodash.flatten");
 const uniq = require("lodash.uniq");
@@ -6,20 +5,16 @@ const uuid = require("uuid/v4");
 const get = require("lodash.get");
 const JavaScriptObfuscator = require("javascript-obfuscator");
 
-const FORMS_TABLE = process.env.FORMS_TABLE;
-const FORMNONCES_TABLE = process.env.FORMNONCES_TABLE;
-const IS_OFFLINE = process.env.IS_OFFLINE;
-let dynamoDb;
-if (IS_OFFLINE === "true") {
-  dynamoDb = new AWS.DynamoDB.DocumentClient({
-    region: "localhost",
-    endpoint: "http://localhost:8000"
-  });
-} else {
-  dynamoDb = new AWS.DynamoDB.DocumentClient();
-}
+const {
+  FORMS_TABLE,
+  FORM_SUBMISSIONS_TABLE,
+  FORMNONCES_TABLE,
+  IS_OFFLINE,
+  dynamoDb
+} = require("../config/constants");
 
-const constructFormData = require("../helpers").constructFormData;
+const { constructFormData } = require("../helpers");
+console.log("constructFormData", constructFormData);
 
 const initialFormData = {
   referer: null,
@@ -123,6 +118,7 @@ exports.getFormsById = (req, res) => {
  * POST /forms
  */
 exports.postForms = (req, res) => {
+  console.log("req.body", JSON.stringify(req.body, null, 2));
   console.log("here creating forms");
   const errors = validationResult(req);
   console.log("errors", errors.array());
@@ -133,11 +129,12 @@ exports.postForms = (req, res) => {
   }
 
   const data = constructFormData(req.body);
+  console.log("data", JSON.stringify(data, null, 2));
+
   const params = {
     TableName: FORMS_TABLE,
     Item: data
   };
-
   dynamoDb.put(params, error => {
     if (error) {
       console.log(error);
@@ -329,7 +326,6 @@ exports.initLib = async (req, res) => {
     const tomorrowDate = getTomorrowsDate();
 
     let data = {
-      _id: uuid(),
       _formId: form && form._id,
       token: currentNonce,
       expiresAt: tomorrowDate.getTime() // timestamp

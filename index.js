@@ -39,6 +39,7 @@ if (IS_OFFLINE === "true") {
 
 // Load middlewares
 const formMiddleware = require("./middleware/form");
+const submissionMiddleware = require("./middleware/submission");
 
 const params = {
   TableName: FORMS_TABLE
@@ -74,7 +75,15 @@ app.get(
   "/forms/:formId/submissions/:id",
   submission.getFormSubmissionsByIdAndFormId
 );
-app.post("/forms/:formId/submissions", submission.postFormSubmissions);
+app.post(
+  "/forms/:formId/submissions",
+  [
+    submissionMiddleware.checkFormIdIsValid,
+    // submissionMiddleware.checkNonceIsValid,
+    submissionMiddleware.checkBodyIsNotEmpty
+  ],
+  submission.postFormSubmissions
+);
 app.delete(
   "/forms/:formId/submissions/:id",
   submission.deleteFormSubmissionsByIdAndFormId
