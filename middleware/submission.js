@@ -46,11 +46,12 @@ exports.checkNonceIsValid = async (req, res, next) => {
 };
 
 exports.checkFormIdIsValid = async (req, res, next) => {
+  console.log("req.originalUrl", req.originalUrl);
   const formById = await dynamoDb
     .get({
       TableName: FORMS_TABLE,
       Key: {
-        _id: req.params.formId
+        _id: req.params.formId || req.params.id
       }
     })
     .promise();
@@ -64,6 +65,12 @@ exports.checkFormIdIsValid = async (req, res, next) => {
 
   // If found, attach formById for use later
   req.formById = formById.Item;
+
+  next();
+};
+
+exports.checkSiteReferrerIsValid = (req, res, next) => {
+  console.log("req.originalUrl", req.originalUrl);
 
   next();
 };

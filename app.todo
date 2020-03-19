@@ -5,12 +5,14 @@ Todos:
  ☐ Migrate all existing functionalities to serverless platform
    ☐ Construct data and sanitize field properly since there's no mongoose model
    ✔ Form submission uploads @done (20-03-18 17:02)
-   ☐ Update other fields for PUT forms
+   ✔ Update other fields for PUT forms @done (20-03-19 10:39)
    ✔ Sending email @done (20-03-18 17:02)
-   ☐ Sending webhooks
+   ✔ Sending webhooks @done (20-03-19 09:41)
    ☐ JWT authentication
  ☐ Validation
  ☐ Making sure all fields in mongodb are migrated properly here
+ ☐ Test Against WebriQ App
+   ☐ @Todo: Delete all submissions functionality: https://stackoverflow.com/questions/9154264/what-is-the-recommended-way-to-delete-a-large-number-of-items-from-dynamodb
 
 For LIVE:
 
@@ -22,7 +24,6 @@ For LIVE:
 
 Things To Ensure:
  ☐ Automate testing of WebriQ Forms via POSTMAN. Part of workflow and bug fixing in the future.
- ☐ 
 
 Bugs:
 

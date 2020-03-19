@@ -3,6 +3,7 @@ const flatten = require("lodash.flatten");
 const uniq = require("lodash.uniq");
 const uuid = require("uuid/v4");
 const get = require("lodash.get");
+const uuidValidate = require("uuid-validate");
 const JavaScriptObfuscator = require("javascript-obfuscator");
 
 const {
@@ -13,8 +14,9 @@ const {
   dynamoDb
 } = require("../config/constants");
 
-const { constructFormData } = require("../helpers");
-console.log("constructFormData", constructFormData);
+const { forms, submissions, nonces } = require("../services/db");
+
+const { constructFormData, sanitizeForms } = require("../helpers");
 
 const initialFormData = {
   referer: null,
@@ -30,119 +32,110 @@ const params = {
 /**
  * GET /forms
  */
-exports.getForms = (req, res) => {
-  dynamoDb.scan(params, (error, result) => {
-    if (error) {
-      console.log(error);
-      res.status(400).json({ error: "Forms not found!" });
-    }
+exports.getForms = async (req, res) => {
+  let result;
 
-    if (result) {
-      res.json(result.Items);
-    } else {
-      res.status(404).json({ error: "Forms not found!" });
-    }
-  });
+  try {
+    result = await forms.all();
+
+    res.json(result.Items.map(form => sanitizeForms(form)));
+  } catch (error) {
+    console.log("error", error);
+    res.status(404).json({ error: "Forms not found!" });
+  }
+
+  // dynamoDb.scan(params, (error, result) => {
+  //   if (error) {
+  //     console.log(error);
+  //     res.status(400).json({ error: "Forms not found!" });
+  //   }
+
+  //   if (result) {
+  //     res.json(result.Items.map(form => sanitizeForms(form)));
+  //   } else {
+
+  //   }
+  // });
 };
 
-/**
- * GET /forms/:url/url
- */
 exports.getFormsByURL = async (req, res) => {
-  let forms = [];
+  let formsResult = [];
 
-  const params = {
-    TableName: FORMS_TABLE,
-    FilterExpression: "contains (siteUrls, :siteUrls)",
-    ExpressionAttributeValues: {
-      ":siteUrls": req.params.url
+  try {
+    formsResult = await forms.getByUrl(req.params.id || req.params.url);
+
+    if (formsResult && formsResult.Items) {
+      formsResult = formsResult.Items.map(form => sanitizeForms(form));
     }
-  };
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      error: true,
+      message: `Internal error retrieving forms data!`,
+      data: null
+    });
+  }
 
-  await dynamoDb
-    .scan(params, (error, result) => {
-      if (error) {
-        console.log(error);
-        return {
-          error: true,
-          message: `Internal error retrieving forms data!`,
-          data: null
-        };
-      }
+  // const formsData = forms.map(form => ({
+  //   id: form._id,
+  //   name: form.name,
+  //   recaptcha: {
+  //     key: get(form, "recaptcha.key", null)
+  //   }
+  // }));
 
-      if (result.Items) {
-        forms = result.Items;
-      }
-    })
-    .promise();
-
-  const formsData = forms.map(form => ({
-    id: form._id,
-    name: form.name,
-    recaptcha: {
-      key: get(form, "recaptcha.key", null)
-    }
-  }));
-
-  return res.status(200).json(formsData);
+  return res.status(200).json(sanitizeForms(formsResult));
 };
 
 /**
  * GET /forms/:id
+ *
+ * Allows fetching form by id or url.
+ * Need to stick with :id route parameter because serverless limitation to match parameters
+ * so can't rename to something else.
  */
-exports.getFormsById = (req, res) => {
-  dynamoDb.get(
-    {
-      TableName: FORMS_TABLE,
-      Key: {
-        _id: req.params.id
-      }
-    },
-    (error, result) => {
-      console.log("result", result);
-      if (error) {
-        console.log(error);
-        res.status(400).json({ error: "Form error!" });
-      }
+exports.getFormsByIdOrURL = async (req, res) => {
+  const resultForms = [];
+  const isParamsUuid = val => uuidValidate(val, 4);
 
-      if (result) {
-        res.json(result.Item);
-      } else {
-        res.status(404).json({ error: "Resource not found!" });
-      }
+  // If passed parameter is URL, handle separately
+  if (!isParamsUuid()) {
+    this.getFormsByURL(req, res);
+    return;
+  }
+
+  try {
+    resultForms = await forms.getById(req.params.id);
+
+    if (resultForms) {
+      res.json(resultForms.Item.map(form => sanitizeForms(form)));
+    } else {
+      res.status(404).json({ error: "Resource not found!" });
     }
-  );
+  } catch (error) {
+    if (error) {
+      console.log(error);
+      res.status(400).json({ error: "Form error!" });
+    }
+  }
 };
 
 /**
  * POST /forms
  */
-exports.postForms = (req, res) => {
-  console.log("req.body", JSON.stringify(req.body, null, 2));
-  console.log("here creating forms");
-  const errors = validationResult(req);
-  console.log("errors", errors.array());
-
-  if (!errors.isEmpty()) {
-    res.status(422).json({ errors: errors.array() });
-    return;
-  }
-
+exports.postForms = async (req, res) => {
   const data = constructFormData(req.body);
   console.log("data", JSON.stringify(data, null, 2));
 
-  const params = {
-    TableName: FORMS_TABLE,
-    Item: data
-  };
-  dynamoDb.put(params, error => {
-    if (error) {
-      console.log(error);
-      res.status(400).json({ error: "Could not create form!" });
-    }
+  try {
+    const result = await forms.create(data);
+  } catch (error) {
+    console.log("error", error);
+    res.status(400).json({ error: "Could not create form!" });
+    return;
+  }
 
-    res.status(201).json(data);
-  });
+  res.status(201).json(sanitizeForms(data));
 };
 
 /**
@@ -151,37 +144,82 @@ exports.postForms = (req, res) => {
  * @todo: Update other fields
  */
 exports.putUpdateForms = (req, res) => {
-  const { name } = req.body;
-  console.log("name", name);
+  console.info("req.formById", req.formById);
+
+  // const { name, siteUrls, testUrls } = req.body;
 
   let UpdateExpressionList = [];
   let ExpressionAttributeNames = {};
   let ExpressionAttributeValues = {};
-  if (name) {
-    ExpressionAttributeNames["#name"] = "name";
-    ExpressionAttributeValues[":n"] = name;
-    UpdateExpressionList.push("#name = :n");
-  }
+  // if (name) {
+  //   ExpressionAttributeNames["#name"] = "name";
+  //   ExpressionAttributeValues[":n"] = name;
+  //   UpdateExpressionList.push("#name = :n");
+  // }
 
-  const params = {
-    TableName: FORMS_TABLE,
-    Key: {
-      _id: req.params.id
-    },
-    UpdateExpression: "SET " + UpdateExpressionList.join(","),
-    ExpressionAttributeNames,
-    ExpressionAttributeValues,
-    ReturnValues: "UPDATED_NEW"
-  };
+  Object.entries(req.body).forEach(([key, value]) => {
+    const isImmutableKey = value => {
+      return ["id", "_id"].includes(value);
+    };
 
-  dynamoDb.update(params, (error, data) => {
-    if (error) {
-      console.log(error);
-      res.status(400).json({ error: "Could not create form!" });
+    if (isImmutableKey(key)) {
+      return; // skip
     }
 
-    res.status(200).json({ name });
+    ExpressionAttributeNames[`#${key}`] = key;
+    ExpressionAttributeValues[`:${key}`] = value;
+    UpdateExpressionList.push(`#${key} = :${key}`);
   });
+
+  // Update updatedAt
+  ExpressionAttributeNames["#updatedAt"] = "updatedAt";
+  ExpressionAttributeValues[":updatedAt"] = new Date().toISOString();
+  UpdateExpressionList.push("#updatedAt = :updatedAt");
+
+  // console.log(
+  //   "UpdateExpressionList",
+  //   JSON.stringify(UpdateExpressionList, null, 2)
+  // );
+  // console.log(
+  //   "ExpressionAttributeNames",
+  //   JSON.stringify(ExpressionAttributeNames, null, 2)
+  // );
+  // console.log(
+  //   "ExpressionAttributeValues",
+  //   JSON.stringify(ExpressionAttributeValues, null, 2)
+  // );
+
+  try {
+    const result = await forms.update(id, data)
+
+    if (result) {
+      res.status(200).json(sanitizeForms(data));
+    }
+  } catch(error) {
+    console.log("error", error);
+    res.status(400).json({ error: "Could not create form!" });
+    return;
+  }
+
+  // const params = {
+  //   TableName: FORMS_TABLE,
+  //   Key: {
+  //     _id: req.params.id
+  //   },
+  //   UpdateExpression: "SET " + UpdateExpressionList.join(","),
+  //   ExpressionAttributeNames,
+  //   ExpressionAttributeValues,
+  //   ReturnValues: "UPDATED_NEW"
+  // };
+
+  // dynamoDb.update(params, (error, data) => {
+  //   if (error) {
+  //     console.log(error);
+  //     res.status(400).json({ error: "Could not create form!" });
+  //   }
+
+  //   res.status(200).json(sanitizeForms(data));
+  // });
 };
 
 /**

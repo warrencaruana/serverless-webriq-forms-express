@@ -1,5 +1,5 @@
 org: dorelljames
-service: my-express-application
+service: webriqforms-serverless
 
 custom:
   WF_Forms_TableName: "webriqforms-forms-table-${self:provider.stage}"

@@ -27,7 +27,9 @@
     "nodemailer": "^6.4.5",
     "pug": "^2.0.4",
     "serverless-http": "^2.3.1",
-    "uuid": "^3.4.0"
+    "simpl-schema": "^1.5.7",
+    "uuid": "^3.4.0",
+    "uuid-validate": "0.0.3"
   },
   "devDependencies": {
     "serverless-dynamodb-local": "^0.2.39",

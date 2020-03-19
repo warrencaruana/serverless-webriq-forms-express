@@ -17,15 +17,16 @@ const constructFormData = data => {
       key: get(data, "recaptcha.key", process.env.APP_DEFAULT_RECAPTCHA_KEY),
       secret: get(
         data,
-        "recaptcha.key",
+        "recaptcha.secret",
         process.env.APP_DEFAULT_RECAPTCHA_SECRET
       )
     },
-    uploadSize: "10MB",
+    uploadSize: get(data, "uploadSize", "10MB"),
     notifications: {
       email: {
         subject: get(data, "notifications.email.subject", null),
         to: get(data, "notifications.email.to", null),
+        cc: get(data, "notifications.email.cc", null),
         from: get(data, "notifications.email.from", null),
         bcc: get(data, "notifications.email.bcc", null)
       },
@@ -39,7 +40,9 @@ const constructFormData = data => {
       // default: "enabled"
       // },
       // }
-    }
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
 };
 
@@ -73,7 +76,9 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
       _id,
       _form: formId,
       payload: formData,
-      attachments: []
+      attachments: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
   ];
 };

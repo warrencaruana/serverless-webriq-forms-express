@@ -47,9 +47,9 @@ exports.getFormSubmissions = (req, res) => {
  * POST /forms/:id/submissions
  */
 exports.postFormSubmissions = async (req, res) => {
-  console.log("here");
   // @todo: validation goes here
-
+  const form = req.formById;
+  const files = req.files;
   const [{ error, message }, data] = constructFormSubmissionData({
     data: {
       ...req.body,
@@ -59,18 +59,12 @@ exports.postFormSubmissions = async (req, res) => {
       ...req.files
     }
   });
-  console.log("data", data);
-
-  const form = req.formById;
-  const files = req.files;
   const formData = data;
 
   if (error) {
     res.status(400).json(message);
     return;
   }
-
-  console.log(req.files);
 
   const createSubmission = async data => {
     return new Promise((resolve, reject) => {
@@ -144,50 +138,53 @@ exports.postFormSubmissions = async (req, res) => {
   };
 
   const sendEmails = data => {
-    const emailTo = get(form, "notifications.email.to", null);
-    console.log("emailTo", emailTo);
+    const emailTos = get(form, "notifications.email.to", []);
 
-    if (!emailTo || !validator.isEmail(emailTo)) {
-      console.log(
-        "Email address To not set or invalid. Skipping sending emails..."
-      );
-      return;
-    }
-
-    res.render(
-      "mail",
-      { data, formName: form.name },
-      (err, submissionEmail) => {
-        if (err) {
-          // @todo: log as sending email processing failed
-          console.log("Email template processing failed!", err);
-          return;
-        }
-
-        // Send email
-        let mailOptions = {
-          to: form.notifications.email.to,
-          cc: form.notifications.email.cc || null,
-          bcc: form.notifications.email.bcc || null,
-          from: form.notifications.email.from || "no-reply@forms.webriq.com",
-          subject: form.notifications.email.subject
-            ? form.notifications.email.subject
-            : "New Form Submission via WebriQ Forms",
-          html: submissionEmail
-        };
-
-        mailer.sendMail(mailOptions, err => {
-          if (err) {
-            // @todo: log as sending email sending failed
-            console.log(err);
-            return res.status(400).json({
-              message: "Something went wrong",
-              errors: [{ msg: err }]
-            });
-          }
-        });
+    const sendEmail = emailTo => {
+      if (!emailTo || !validator.isEmail(emailTo)) {
+        console.log(
+          "Email address To not set or invalid. Skipping sending emails..."
+        );
+        return;
       }
-    );
+
+      res.render(
+        "mail",
+        { data, formName: form.name },
+        (err, submissionEmail) => {
+          if (err) {
+            // @todo: log as sending email processing failed
+            console.log("Email template processing failed!", err);
+            return;
+          }
+
+          // Send email
+          let mailOptions = {
+            to: form.notifications.email.to,
+            cc: form.notifications.email.cc || null,
+            bcc: form.notifications.email.bcc || null,
+            from: form.notifications.email.from || "no-reply@forms.webriq.com",
+            subject: form.notifications.email.subject
+              ? form.notifications.email.subject
+              : "New Form Submission via WebriQ Forms",
+            html: submissionEmail
+          };
+
+          mailer.sendMail(mailOptions, err => {
+            if (err) {
+              // @todo: log as sending email sending failed
+              console.log(err);
+              return res.status(400).json({
+                message: "Something went wrong",
+                errors: [{ msg: err }]
+              });
+            }
+          });
+        }
+      );
+    };
+
+    emailTos.forEach(sendEmail);
 
     return data;
   };
@@ -263,32 +260,6 @@ exports.postFormSubmissions = async (req, res) => {
     });
 };
 
-exports.processUploads = async ({ form, files, formData }) => {
-  console.log("files", files);
-  const fileSizeLimit = bytes((form && form.uploadSize) || 0);
-
-  const doUpload = (upload, fileSizeLimit) => {
-    return new Promise((resolve, reject) => {
-      console.log("upload, fileSizeLimit", upload, fileSizeLimit);
-      if (upload.size > fileSizeLimit) {
-        reject("Skipping file upload due to size!");
-        return;
-      }
-
-      resolve("ok");
-      // console.log("uploading via cloudinary and update resource when done");
-    });
-  };
-
-  const uploads = Object.entries(files).map(([index, upload]) =>
-    doUpload(upload, fileSizeLimit)
-  );
-
-  Promise.all(uploads).then(allUploads => {
-    // update dynamodb here
-  });
-};
-
 /**
  * GET /forms/:formId/submissions/:id
  */
@@ -333,6 +304,28 @@ exports.deleteFormSubmissionsByIdAndFormId = (req, res) => {
       if (error) {
         console.log(error);
         res.status(400).json({ error: "Form submission not found!" });
+      }
+
+      res.status(204).json();
+    }
+  );
+};
+
+/**
+ * DELETE /forms/:formId/submissions
+ */
+exports.deleteFormSubmissionsByByFormId = (req, res) => {
+  dynamoDb.delete(
+    {
+      TableName: FORM_SUBMISSIONS_TABLE,
+      Key: {
+        _form: req.params.formId
+      }
+    },
+    (error, result) => {
+      if (error) {
+        console.log(error);
+        res.status(400).json({ error: "Form submissions not found!" });
       }
 
       res.status(204).json();

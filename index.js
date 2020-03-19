@@ -23,19 +23,13 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.set("view engine", "pug");
 
-const FORMS_TABLE = process.env.FORMS_TABLE;
-const FORM_SUBMISSIONS_TABLE = process.env.FORM_SUBMISSIONS_TABLE;
-const FORMNONCES_TABLE = process.env.FORMNONCES_TABLE;
-const IS_OFFLINE = process.env.IS_OFFLINE;
-let dynamoDb;
-if (IS_OFFLINE === "true") {
-  dynamoDb = new AWS.DynamoDB.DocumentClient({
-    region: "localhost",
-    endpoint: "http://localhost:8000"
-  });
-} else {
-  dynamoDb = new AWS.DynamoDB.DocumentClient();
-}
+const {
+  FORMS_TABLE,
+  FORM_SUBMISSIONS_TABLE,
+  FORMNONCES_TABLE,
+  IS_OFFLINE,
+  dynamoDb
+} = require("./config/constants");
 
 // Load middlewares
 const formMiddleware = require("./middleware/form");
@@ -54,17 +48,21 @@ const nonce = require("./controllers/nonces");
  * GET /
  */
 app.get("/", (req, res) => {
-  res.json({ message: "Welcome to WebriQ Forms API!" });
+  res.json({ message: "Welcome to WebriQ Forms API!", version: 2 });
 });
 
 /**
  * Forms
  */
 app.get("/forms", form.getForms);
+app.get("/forms/:id", form.getFormsByIdOrURL);
 app.get("/forms/:url/url", form.getFormsByURL);
-app.get("/forms/:id", form.getFormsById);
-app.post("/forms", formMiddleware.createForm, form.postForms);
-app.put("/forms/:id", form.putUpdateForms);
+app.post("/forms", [formMiddleware.sanitizeFormData], form.postForms);
+app.put(
+  "/forms/:id",
+  [submissionMiddleware.checkFormIdIsValid],
+  form.putUpdateForms
+);
 app.delete("/forms/:id", form.deleteFormsById);
 
 /**
@@ -79,13 +77,20 @@ app.post(
   "/forms/:formId/submissions",
   [
     submissionMiddleware.checkFormIdIsValid,
-    // submissionMiddleware.checkNonceIsValid,
+    submissionMiddleware.checkNonceIsValid,
+    submissionMiddleware.checkSiteReferrerIsValid,
     submissionMiddleware.checkBodyIsNotEmpty
   ],
   submission.postFormSubmissions
 );
 app.delete(
+  "/forms/:formId/submissions",
+  [submissionMiddleware.checkFormIdIsValid],
+  submission.deleteFormSubmissionsByByFormId
+);
+app.delete(
   "/forms/:formId/submissions/:id",
+  [submissionMiddleware.checkFormIdIsValid],
   submission.deleteFormSubmissionsByIdAndFormId
 );
 
