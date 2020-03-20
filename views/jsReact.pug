@@ -62,9 +62,16 @@ script.
 
   function assignFormHandlers(formIds) {
     var forms = document.querySelectorAll("form[webriq]");
+
     forms.forEach(function(singleForm, singleFormIndex) {
       singleForm.addEventListener("submit", function(e) {
         e.preventDefault();
+
+        const nonces = JSON.parse('!{formNonces}');
+        const getNonceForFormId = (nonces, formId) => nonces.find(form => form.formId === formId) && nonces.find(form => form.formId === formId).nonce;
+
+        const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
+        const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
 
         // When testing, data-form-id attribute must be specified
         if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
@@ -78,8 +85,11 @@ script.
           return;
         }
 
-        const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
-        const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
+        // Check if form id is valid for current site
+        if (!nonces.find(nonce => nonce.formId === formId)) {
+          console.error(`WebriQ Forms: Form ID: ${formId} is not valid for this site. See ${webriqFormsDocsUrl} for more info.`);
+          return;
+        }
 
         var thankYou = location.origin;
         if (singleForm.hasAttribute("data-thankyou-url")) {
@@ -87,9 +97,6 @@ script.
         } else {
           thankYou += "/thank-you";
         }
-
-        const nonces = JSON.parse('!{formNonces}');
-        const getNonceForFormId = (nonces, formId) => nonces.find(form => form.formId === formId) && nonces.find(form => form.formId === formId).nonce;
 
         if (! sendingLabelShown) {
           // Disable submit and show message that form is being submitted

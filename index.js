@@ -60,7 +60,7 @@ app.get("/forms/:url/url", form.getFormsByURL);
 app.post("/forms", [formMiddleware.sanitizeFormData], form.postForms);
 app.put(
   "/forms/:id",
-  [submissionMiddleware.checkFormIdIsValid],
+  [submissionMiddleware.checkFormIdIsValid, formMiddleware.sanitizeFormData],
   form.putUpdateForms
 );
 app.delete("/forms/:id", form.deleteFormsById);

@@ -105,22 +105,19 @@ const removeSiteProtocols = require("../helpers").removeSiteProtocols;
 //   );
 
 exports.sanitizeFormData = (req, res, next) => {
-  const {
-    siteUrls,
-    notifications: { to, cc, bcc }
-  } = req.body;
+  const { siteUrls, notifications } = req.body;
 
   ["to", "cc", "bcc"].forEach(value => {
-    console.log(
-      'req.body["notifications"]["email"][`${value}`]',
-      req.body["notifications"]["email"][`${value}`]
-    );
-    if (value && typeof value === "string") {
-      if (req.body["notifications"]["email"][`${value}`]) {
-        req.body["notifications"]["email"][`${value}`] = [
-          req.body["notifications"]["email"][`${value}`]
-        ];
-      }
+    const currentValue = get(notifications, `email.${value}`, null);
+
+    if (!currentValue) {
+      req.body["notifications"]["email"][`${value}`] = [];
+      return; // skip if undefined or null
+    }
+
+    // Converts string to array before reaching controller
+    if (currentValue && typeof currentValue === "string") {
+      req.body["notifications"]["email"][`${value}`] = [currentValue];
     }
   });
 

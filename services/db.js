@@ -1,4 +1,5 @@
 const uuidValidate = require("uuid-validate");
+const omit = require("lodash.omit");
 const {
   FORMS_TABLE,
   FORM_SUBMISSIONS_TABLE,
@@ -46,7 +47,7 @@ const forms = {
     };
 
     return new Promise((resolve, reject) => {
-      dynamoDb.put(params, (error, data) => {
+      dynamoDb.put(params, (error, result) => {
         if (error) {
           console.log(error);
           reject(error);
@@ -57,20 +58,19 @@ const forms = {
     });
   },
 
-  update({ id, data }) {
+  update(id, data) {
     let UpdateExpressionList = [];
     let ExpressionAttributeNames = {};
     let ExpressionAttributeValues = {};
 
-    Object.entries(data).forEach(([key, value]) => {
-      const isImmutableKey = value => {
-        return ["id", "_id"].includes(value);
-      };
+    const skipImmutables = data => {
+      const ignoreList = ["id", "_id", "createdAt", "updatedAt"];
+      return omit(data, ignoreList);
+    };
 
-      if (isImmutableKey(key)) {
-        return; // skip
-      }
+    const formData = Object.entries(skipImmutables(data));
 
+    formData.forEach(([key, value]) => {
       ExpressionAttributeNames[`#${key}`] = key;
       ExpressionAttributeValues[`:${key}`] = value;
       UpdateExpressionList.push(`#${key} = :${key}`);
@@ -80,6 +80,19 @@ const forms = {
     ExpressionAttributeNames["#updatedAt"] = "updatedAt";
     ExpressionAttributeValues[":updatedAt"] = new Date().toISOString();
     UpdateExpressionList.push("#updatedAt = :updatedAt");
+
+    // console.log(
+    //   "UpdateExpressionList",
+    //   JSON.stringify(UpdateExpressionList, null, 2)
+    // );
+    // console.log(
+    //   "ExpressionAttributeNames",
+    //   JSON.stringify(ExpressionAttributeNames, null, 2)
+    // );
+    // console.log(
+    //   "ExpressionAttributeValues",
+    //   JSON.stringify(ExpressionAttributeValues, null, 2)
+    // );
 
     const params = {
       TableName: FORMS_TABLE,
@@ -99,9 +112,20 @@ const forms = {
           reject(error);
         }
 
-        resolve(data);
+        resolve(data && data.Attributes);
       });
     });
+  },
+
+  delete(id) {
+    const params = {
+      TableName: FORMS_TABLE,
+      Key: {
+        _id: id
+      }
+    };
+
+    return dynamoDb.delete(params).promise();
   }
 };
 

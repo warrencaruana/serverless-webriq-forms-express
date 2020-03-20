@@ -25,10 +25,10 @@ const constructFormData = data => {
     notifications: {
       email: {
         subject: get(data, "notifications.email.subject", null),
-        to: get(data, "notifications.email.to", null),
-        cc: get(data, "notifications.email.cc", null),
         from: get(data, "notifications.email.from", null),
-        bcc: get(data, "notifications.email.bcc", null)
+        to: get(data, "notifications.email.to", []),
+        cc: get(data, "notifications.email.cc", []),
+        bcc: get(data, "notifications.email.bcc", [])
       },
       webhooks: get(data, "notifications.webhooks", [])
       // {
@@ -133,10 +133,17 @@ const removeSiteProtocols = urls => {
   return urls;
 };
 
+const makeResponse = (res, status = 200, response) => {};
+
+const log = error => {
+  console.log(error);
+};
+
 module.exports = {
   constructFormData,
   constructFormSubmissionData,
   removeSiteProtocols,
   sanitizeForms,
-  sanitizeSubmissions
+  sanitizeSubmissions,
+  log
 };

@@ -25,54 +25,41 @@ const initialFormData = {
   siteUrls: []
 };
 
-const params = {
-  TableName: FORMS_TABLE
-};
-
 /**
  * GET /forms
  */
 exports.getForms = async (req, res) => {
-  let result;
-
   try {
-    result = await forms.all();
+    const result = await forms.all();
 
-    res.json(result.Items.map(form => sanitizeForms(form)));
+    if (result && result.Items) {
+      return res.json(result.Items.map(form => sanitizeForms(form)));
+    }
+
+    return res.json([]);
   } catch (error) {
     console.log("error", error);
-    res.status(404).json({ error: "Forms not found!" });
+    return res
+      .status(404)
+      .json({ error: "Forms not found!", message: error && error.message });
   }
-
-  // dynamoDb.scan(params, (error, result) => {
-  //   if (error) {
-  //     console.log(error);
-  //     res.status(400).json({ error: "Forms not found!" });
-  //   }
-
-  //   if (result) {
-  //     res.json(result.Items.map(form => sanitizeForms(form)));
-  //   } else {
-
-  //   }
-  // });
 };
 
 exports.getFormsByURL = async (req, res) => {
-  let formsResult = [];
-
   try {
+    let formsResult = [];
     formsResult = await forms.getByUrl(req.params.id || req.params.url);
 
     if (formsResult && formsResult.Items) {
       formsResult = formsResult.Items.map(form => sanitizeForms(form));
     }
+
+    return res.status(200).json(sanitizeForms(formsResult));
   } catch (error) {
-    console.log(error);
+    console.log("error", error);
     return res.status(500).json({
       error: true,
-      message: `Internal error retrieving forms data!`,
-      data: null
+      message: error && error.message
     });
   }
 
@@ -83,8 +70,6 @@ exports.getFormsByURL = async (req, res) => {
   //     key: get(form, "recaptcha.key", null)
   //   }
   // }));
-
-  return res.status(200).json(sanitizeForms(formsResult));
 };
 
 /**
@@ -95,27 +80,24 @@ exports.getFormsByURL = async (req, res) => {
  * so can't rename to something else.
  */
 exports.getFormsByIdOrURL = async (req, res) => {
-  const resultForms = [];
-  const isParamsUuid = val => uuidValidate(val, 4);
+  const isRequestParamValidId = val => uuidValidate(val, 4);
 
-  // If passed parameter is URL, handle separately
-  if (!isParamsUuid()) {
-    this.getFormsByURL(req, res);
-    return;
+  if (!isRequestParamValidId(req.params.id)) {
+    return this.getFormsByURL(req, res);
   }
 
   try {
-    resultForms = await forms.getById(req.params.id);
+    const result = await forms.getById(req.params.id);
 
-    if (resultForms) {
-      res.json(resultForms.Item.map(form => sanitizeForms(form)));
-    } else {
-      res.status(404).json({ error: "Resource not found!" });
+    if (result && result.Item) {
+      return res.json(sanitizeForms(result.Item));
     }
+
+    return res.status(404).json({ error: "Resource not found!" });
   } catch (error) {
     if (error) {
-      console.log(error);
-      res.status(400).json({ error: "Form error!" });
+      console.log("error", error);
+      return res.status(400).json({ error: "Form error!" });
     }
   }
 };
@@ -125,13 +107,15 @@ exports.getFormsByIdOrURL = async (req, res) => {
  */
 exports.postForms = async (req, res) => {
   const data = constructFormData(req.body);
-  console.log("data", JSON.stringify(data, null, 2));
 
   try {
     const result = await forms.create(data);
   } catch (error) {
     console.log("error", error);
-    res.status(400).json({ error: "Could not create form!" });
+    res.status(400).json({
+      error: "Could not create form!",
+      message: error && error.message
+    });
     return;
   }
 
@@ -140,108 +124,42 @@ exports.postForms = async (req, res) => {
 
 /**
  * PUT /forms/:id
- *
- * @todo: Update other fields
  */
-exports.putUpdateForms = (req, res) => {
-  console.info("req.formById", req.formById);
-
-  // const { name, siteUrls, testUrls } = req.body;
-
-  let UpdateExpressionList = [];
-  let ExpressionAttributeNames = {};
-  let ExpressionAttributeValues = {};
-  // if (name) {
-  //   ExpressionAttributeNames["#name"] = "name";
-  //   ExpressionAttributeValues[":n"] = name;
-  //   UpdateExpressionList.push("#name = :n");
-  // }
-
-  Object.entries(req.body).forEach(([key, value]) => {
-    const isImmutableKey = value => {
-      return ["id", "_id"].includes(value);
-    };
-
-    if (isImmutableKey(key)) {
-      return; // skip
-    }
-
-    ExpressionAttributeNames[`#${key}`] = key;
-    ExpressionAttributeValues[`:${key}`] = value;
-    UpdateExpressionList.push(`#${key} = :${key}`);
-  });
-
-  // Update updatedAt
-  ExpressionAttributeNames["#updatedAt"] = "updatedAt";
-  ExpressionAttributeValues[":updatedAt"] = new Date().toISOString();
-  UpdateExpressionList.push("#updatedAt = :updatedAt");
-
-  // console.log(
-  //   "UpdateExpressionList",
-  //   JSON.stringify(UpdateExpressionList, null, 2)
-  // );
-  // console.log(
-  //   "ExpressionAttributeNames",
-  //   JSON.stringify(ExpressionAttributeNames, null, 2)
-  // );
-  // console.log(
-  //   "ExpressionAttributeValues",
-  //   JSON.stringify(ExpressionAttributeValues, null, 2)
-  // );
+exports.putUpdateForms = async (req, res) => {
+  const originalForm = req.formById;
+  const id = req.params.id;
+  const data = constructFormData(req.body);
 
   try {
-    const result = await forms.update(id, data)
+    const result = await forms.update(id, data);
 
     if (result) {
-      res.status(200).json(sanitizeForms(data));
+      res.status(200).json(sanitizeForms({ ...originalForm, ...result }));
     }
-  } catch(error) {
+  } catch (error) {
     console.log("error", error);
-    res.status(400).json({ error: "Could not create form!" });
-    return;
+    return res.status(500).json({
+      error: "Could not update form!",
+      message: error && error.message
+    });
   }
-
-  // const params = {
-  //   TableName: FORMS_TABLE,
-  //   Key: {
-  //     _id: req.params.id
-  //   },
-  //   UpdateExpression: "SET " + UpdateExpressionList.join(","),
-  //   ExpressionAttributeNames,
-  //   ExpressionAttributeValues,
-  //   ReturnValues: "UPDATED_NEW"
-  // };
-
-  // dynamoDb.update(params, (error, data) => {
-  //   if (error) {
-  //     console.log(error);
-  //     res.status(400).json({ error: "Could not create form!" });
-  //   }
-
-  //   res.status(200).json(sanitizeForms(data));
-  // });
 };
 
 /**
  * DELETE /forms/:id
  */
-exports.deleteFormsById = (req, res) => {
-  dynamoDb.delete(
-    {
-      ...params,
-      Key: {
-        _id: req.params.id
-      }
-    },
-    error => {
-      if (error) {
-        console.log(error);
-        res.status(400).json({ error: "Could not create form!" });
-      }
+exports.deleteFormsById = async (req, res) => {
+  try {
+    const result = await forms.delete(req.params.id);
 
-      res.status(204).json();
-    }
-  );
+    return res.status(204).json();
+  } catch (error) {
+    console.log("error", error);
+    return res.status(500).json({
+      error: "Could not delete form!",
+      message: error && error.message
+    });
+  }
 };
 
 exports.prepareJSLib = async (req, res, viewFile = "js") => {
@@ -297,7 +215,7 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
 };
 
 exports.initLib = async (req, res) => {
-  let forms = [];
+  let formsData = [];
 
   let url;
   try {
@@ -311,36 +229,22 @@ exports.initLib = async (req, res) => {
   }
 
   const referer = url && !url.host ? url.href : url.host;
+  console.log("referer", referer);
 
   if (referer) {
-    const params = {
-      TableName: FORMS_TABLE,
-      FilterExpression: "contains (siteUrls, :siteUrls)",
-      ExpressionAttributeValues: {
-        ":siteUrls": referer
+    try {
+      const result = await forms.getByUrl(referer);
+
+      if (result && result.Items) {
+        formsData = result.Items;
       }
-    };
-
-    await dynamoDb
-      .scan(params, (error, result) => {
-        if (error) {
-          console.log(error);
-          return {
-            error: true,
-            message: `Internal error retrieving form data!`,
-            data: initialFormData
-          };
-        }
-
-        if (result.Items) {
-          forms = result.Items;
-        }
-      })
-      .promise();
+    } catch (error) {
+      console.log("error", error);
+    }
   }
 
-  console.log("forms", forms);
-  if (!forms || forms.length < 1) {
+  console.log("formsData", formsData);
+  if (!formsData || formsData.length < 1) {
     return {
       error: true,
       message: `WebriQ Forms: Site is not registered and/or ${referer}' is not present in its 'siteUrls'. When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${process.env.APP_URL}/docs for more info.`,
@@ -359,7 +263,7 @@ exports.initLib = async (req, res) => {
   };
 
   // // Create _nonces
-  forms.forEach(async form => {
+  formsData.forEach(async form => {
     const currentNonce = generateNonce();
     const tomorrowDate = getTomorrowsDate();
 
@@ -411,7 +315,7 @@ exports.initLib = async (req, res) => {
     error: false,
     message: "Successfully init WebriQ Form requirements",
     data: {
-      forms,
+      forms: formsData,
       referer,
       formNonces,
       siteUrls

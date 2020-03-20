@@ -49,6 +49,7 @@ exports.getFormSubmissions = (req, res) => {
 exports.postFormSubmissions = async (req, res) => {
   // @todo: validation goes here
   const form = req.formById;
+  console.log("form", form);
   const files = req.files;
   const [{ error, message }, data] = constructFormSubmissionData({
     data: {
@@ -79,6 +80,7 @@ exports.postFormSubmissions = async (req, res) => {
             reject(error);
           }
 
+          console.log("data create", data);
           resolve(data);
         }
       );
@@ -184,7 +186,7 @@ exports.postFormSubmissions = async (req, res) => {
       );
     };
 
-    emailTos.forEach(sendEmail);
+    emailTos && emailTos.forEach(sendEmail);
 
     return data;
   };
@@ -192,7 +194,7 @@ exports.postFormSubmissions = async (req, res) => {
   const sendWebhooks = data => {
     const submissions = data;
 
-    form.notifications.webhooks.forEach(hook => {
+    get(form, "notifications.webhooks", []).forEach(hook => {
       if (hook.status !== "enabled") {
         return;
       }

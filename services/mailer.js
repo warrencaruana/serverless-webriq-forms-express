@@ -1,10 +1,9 @@
 const nodemailer = require("nodemailer");
 const currentEnv = process.env.APP_STAGE;
-console.log("currentEnv", currentEnv);
 
 let transporter;
 
-if (currentEnv !== "dev") {
+if (currentEnv === "production") {
   transporter = nodemailer.createTransport({
     service: "Mailgun",
     auth: {
@@ -13,7 +12,6 @@ if (currentEnv !== "dev") {
     }
   });
 } else {
-  console.log("hereee");
   transporter = nodemailer.createTransport({
     host: "smtp.mailtrap.io",
     port: 2525,
