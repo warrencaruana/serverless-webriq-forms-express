@@ -1,10 +1,10 @@
 org: dorelljames
-service: webriqforms-serverless
+service: wfv2-serverless
 
 custom:
-  WF_Forms_TableName: "webriqforms-forms-table-${self:provider.stage}"
-  WF_FormSubmissions_TableName: "webriqforms-form_submissions-table-${self:provider.stage}"
-  WF_FormNonces_TableName: "webriqforms-form_nonces-table-${self:provider.stage}"
+  WF_Forms_TableName: "wfv2-forms-table-${self:provider.stage}"
+  WF_FormSubmissions_TableName: "wfv2-form_submissions-table-${self:provider.stage}"
+  WF_FormNonces_TableName: "wfv2-form_nonces-table-${self:provider.stage}"
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:
@@ -16,6 +16,7 @@ custom:
 provider:
   name: aws
   runtime: nodejs12.x
+  memorySize: 512
   stage: dev
   region: us-west-2
   iamRoleStatements:

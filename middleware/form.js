@@ -107,21 +107,48 @@ const removeSiteProtocols = require("../helpers").removeSiteProtocols;
 exports.sanitizeFormData = (req, res, next) => {
   const { siteUrls, notifications } = req.body;
 
+  const initialEmailNotificationsValue = {
+    notifications: {
+      email: {
+        to: [],
+        cc: [],
+        bcc: []
+      }
+    }
+  };
+
+  // Set initial value
+  req.body = {
+    ...req.body,
+    ...initialEmailNotificationsValue
+  };
+
   ["to", "cc", "bcc"].forEach(value => {
     const currentValue = get(notifications, `email.${value}`, null);
 
-    if (!currentValue) {
-      req.body["notifications"]["email"][`${value}`] = [];
-      return; // skip if undefined or null
-    }
-
     // Converts string to array before reaching controller
     if (currentValue && typeof currentValue === "string") {
-      req.body["notifications"]["email"][`${value}`] = [currentValue];
+      req.body["notifications"]["email"][value] = [currentValue];
     }
   });
 
-  console.log("req.body", JSON.stringify(req.body, null, 2));
+  // Update notification email value
+  // if (!get(req.body, "notifications.email")) {
+  //   req.body = {
+  //     ...req.body,
+  //     ...{
+  //       notifications: {
+  //         email: initialEmailNotificationsValue.notifications.email
+  //       }
+  //     }
+  //   };
+  // }
+  // req.body["notifications"]["email"] = get(
+  //   initialEmailNotificationsValue,
+  //   "notifications.email"
+  // );
+
+  // console.log("req.body", JSON.stringify(req.body, null, 2));
 
   // Convert string siteUrls if string
   if (siteUrls && typeof siteUrls === "string") {
