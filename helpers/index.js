@@ -3,7 +3,6 @@ const get = require("lodash.get");
 const omit = require("lodash.omit");
 
 const constructFormData = data => {
-  console.log("construct1111");
   const _id = uuid();
 
   return {
@@ -31,15 +30,6 @@ const constructFormData = data => {
         bcc: get(data, "notifications.email.bcc", [])
       },
       webhooks: get(data, "notifications.webhooks", [])
-      // {
-      // name: { type: String, default: null },
-      // url: { type: String, default: null },
-      // status: {
-      // type: String,
-      // enum: ["enabled", "disabled"],
-      // default: "enabled"
-      // },
-      // }
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -133,17 +123,10 @@ const removeSiteProtocols = urls => {
   return urls;
 };
 
-const makeResponse = (res, status = 200, response) => {};
-
-const log = error => {
-  console.log(error);
-};
-
 module.exports = {
   constructFormData,
   constructFormSubmissionData,
   removeSiteProtocols,
   sanitizeForms,
-  sanitizeSubmissions,
-  log
+  sanitizeSubmissions
 };

@@ -2,15 +2,8 @@ const serverless = require("serverless-http");
 const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
-const AWS = require("aws-sdk");
-const get = require("lodash.get");
-const multer = require("multer");
 const formData = require("express-form-data");
 const os = require("os");
-
-const constructFormData = require("./helpers").constructFormData;
-const constructFormSubmissionData = require("./helpers")
-  .constructFormSubmissionData;
 
 const options = {
   uploadDir: os.tmpdir(),
@@ -23,21 +16,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.set("view engine", "pug");
 
-const {
-  FORMS_TABLE,
-  FORM_SUBMISSIONS_TABLE,
-  FORMNONCES_TABLE,
-  IS_OFFLINE,
-  dynamoDb
-} = require("./config/constants");
-
 // Load middlewares
 const formMiddleware = require("./middleware/form");
 const submissionMiddleware = require("./middleware/submission");
-
-const params = {
-  TableName: FORMS_TABLE
-};
 
 // Load controllers
 const form = require("./controllers/form");
@@ -77,7 +58,7 @@ app.post(
   "/forms/:formId/submissions",
   [
     submissionMiddleware.checkFormIdIsValid,
-    submissionMiddleware.checkNonceIsValid,
+    // submissionMiddleware.checkNonceIsValid,
     submissionMiddleware.checkSiteReferrerIsValid,
     submissionMiddleware.checkBodyIsNotEmpty
   ],

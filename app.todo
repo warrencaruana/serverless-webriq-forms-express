@@ -4,13 +4,18 @@ Todos:
  ✔ Validate via nonce form submission @done (20-03-18 10:05)
  ☐ Migrate all existing functionalities to serverless platform
    ☐ Construct data and sanitize field properly since there's no mongoose model
+     ✔ Forms all sanitized @done (20-03-23 14:41)
+     ✔ Finalize form create @done (20-03-23 14:12)
+     ✔ Finalize form update @done (20-03-23 14:41)
+     ☐ Finalize form submission create
    ✔ Form submission uploads @done (20-03-18 17:02)
    ✔ Update other fields for PUT forms @done (20-03-19 10:39)
    ✔ Sending email @done (20-03-18 17:02)
    ✔ Sending webhooks @done (20-03-19 09:41)
    ☐ JWT authentication
  ☐ Validation
- ☐ Making sure all fields in mongodb are migrated properly here
+ ✔ Making sure all fields in mongodb are migrated properly here @done (20-03-23 14:44)
+ ☐ Put back function routes below.
  ☐ Test Against WebriQ App
    ☐ @Todo: Delete all submissions functionality: https://stackoverflow.com/questions/9154264/what-is-the-recommended-way-to-delete-a-large-number-of-items-from-dynamodb
 
@@ -21,6 +26,7 @@ For LIVE:
  ☐ Testing with WebriQ App
  ☐ Migration of domain of forms.webriq.com to AWS
  ☐ Create AWS account
+ ☐ Automate endpoints test with postman
 
 Things To Ensure:
  ☐ Automate testing of WebriQ Forms via POSTMAN. Part of workflow and bug fixing in the future.

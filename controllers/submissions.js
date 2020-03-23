@@ -3,14 +3,7 @@ const get = require("lodash.get");
 const axios = require("axios");
 const validator = require("validator");
 
-const {
-  FORMS_TABLE,
-  FORM_SUBMISSIONS_TABLE,
-  FORMNONCES_TABLE,
-  IS_OFFLINE,
-  dynamoDb
-} = require("../config/constants");
-
+const { FORM_SUBMISSIONS_TABLE, dynamoDb } = require("../config/constants");
 const { fileTransport, mailer } = require("../services");
 const {
   constructFormSubmissionData,
@@ -35,7 +28,7 @@ exports.getFormSubmissions = (req, res) => {
       }
 
       if (result) {
-        res.json(result.Items);
+        res.json(sanitizeSubmissions(result.Items));
       } else {
         res.status(404).json({ error: "Forms submissions not found!" });
       }
@@ -88,7 +81,7 @@ exports.postFormSubmissions = async (req, res) => {
   };
 
   const sendCreatedResponse = data => {
-    res.status(201).json(data);
+    res.status(201).json(sanitizeSubmissions(data));
 
     return data;
   };
@@ -282,7 +275,7 @@ exports.getFormSubmissionsByIdAndFormId = (req, res) => {
       }
 
       if (result) {
-        res.json(result.Item);
+        res.json(sanitizeSubmissions(result.Item));
       } else {
         res.status(404).json({ error: "Form submission not found!" });
       }
