@@ -4,6 +4,7 @@ const express = require("express");
 const app = express();
 const formData = require("express-form-data");
 const os = require("os");
+const cors = require("cors");
 
 const options = {
   uploadDir: os.tmpdir(),
@@ -14,6 +15,7 @@ app.use(formData.parse(options));
 app.use(formData.format());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cors());
 app.set("view engine", "pug");
 
 // Load middlewares

@@ -246,9 +246,11 @@ exports.postFormSubmissions = async (req, res) => {
 
   return createSubmission(data)
     .then(sendCreatedResponse)
-    .then(processUploads)
-    .then(sendEmails)
-    .then(sendWebhooks)
+    .then(data => {
+      processUploads(data);
+      sendEmails(data);
+      sendWebhooks(data);
+    })
     .catch(error => {
       console.log(error);
       res.status(400).json({ error: "Could not create form submission!" });
