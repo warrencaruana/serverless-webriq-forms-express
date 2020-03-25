@@ -16,7 +16,7 @@ custom:
 provider:
   name: aws
   runtime: nodejs12.x
-  memorySize: 512
+  memorySize: 256
   stage: dev
   region: us-west-2
   iamRoleStatements:
@@ -43,8 +43,8 @@ provider:
     CLOUDINARY_CLOUD_NAME: dokfyxs4e
     CLOUDINARY_API_KEY: 151834162875131
     CLOUDINARY_API_SECRET: 3cxSNFjBmJRNjOrOVBweYgx-ZgQ
-    MAILGUN_USER: postmaster@mg.foodhunt.today
-    MAILGUN_PASSWORD: 4e38973f926ff10889b69de7ebaf2d56
+    MAILGUN_USER: postmaster@webriqshops.com
+    MAILGUN_PASSWORD: 0c7389efd226e9bee418cc83e73b0bfe
     MAILTRAP_USER: 44314661af65a2928
     MAILTRAP_PASSWORD: 093bfd51adeb42
     WEBRIQ_FORMS_API_URL_DEV: http://localhost:3000/forms/
@@ -68,6 +68,23 @@ functions:
       - http: ANY /
       - http: "ANY {proxy+}"
 
+  getFormSubmissions:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{proxy+}/submissions"
+  getFormSubmission:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{proxy+}/submissions/{id}"
+  createFormSubmission:
+    handler: index.handler
+    events:
+      - http: "POST /forms/{proxy+}/submissions"
+  deleteFormSubmission:
+    handler: index.handler
+    events:
+      - http: "DELETE /forms/{proxy+}/submissions/{id}"
+
   createForm:
     handler: index.handler
     events:
@@ -76,6 +93,10 @@ functions:
     handler: index.handler
     events:
       - http: "GET /forms"
+  getFormByURL:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{proxy+}/url"
   getForm:
     handler: index.handler
     events:
