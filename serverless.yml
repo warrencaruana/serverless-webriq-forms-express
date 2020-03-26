@@ -1,10 +1,10 @@
 org: dorelljames
-service: wfv2-serverless
+service: wfv2-test2-serverless
 
 custom:
-  WF_Forms_TableName: "wfv2-forms-table-${self:provider.stage}"
-  WF_FormSubmissions_TableName: "wfv2-form_submissions-table-${self:provider.stage}"
-  WF_FormNonces_TableName: "wfv2-form_nonces-table-${self:provider.stage}"
+  WF_Forms_TableName: "wfv2-test2-forms-table-${self:provider.stage}"
+  WF_FormSubmissions_TableName: "wfv2-test2-form_submissions-table-${self:provider.stage}"
+  WF_FormNonces_TableName: "wfv2-test2-form_nonces-table-${self:provider.stage}"
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:
@@ -16,7 +16,7 @@ custom:
 provider:
   name: aws
   runtime: nodejs12.x
-  memorySize: 256
+  memorySize: 512
   stage: dev
   region: us-west-2
   iamRoleStatements:
@@ -71,19 +71,19 @@ functions:
   getFormSubmissions:
     handler: index.handler
     events:
-      - http: "GET /forms/{proxy+}/submissions"
+      - http: "GET /forms/{proxy}/submissions"
   getFormSubmission:
     handler: index.handler
     events:
-      - http: "GET /forms/{proxy+}/submissions/{id}"
+      - http: "GET /forms/{proxy}/submissions/{id}"
   createFormSubmission:
     handler: index.handler
     events:
-      - http: "POST /forms/{proxy+}/submissions"
+      - http: "POST /forms/{proxy}/submissions"
   deleteFormSubmission:
     handler: index.handler
     events:
-      - http: "DELETE /forms/{proxy+}/submissions/{id}"
+      - http: "DELETE /forms/{proxy}/submissions/{id}"
 
   createForm:
     handler: index.handler
@@ -96,20 +96,20 @@ functions:
   getFormByURL:
     handler: index.handler
     events:
-      - http: "GET /forms/{proxy+}/url"
+      - http: "GET /forms/{proxy}/url"
   getForm:
     handler: index.handler
     events:
-      - http: "GET /forms/{proxy+}"
+      - http: "GET /forms/{proxy}"
 
   updateForm:
     handler: index.handler
     events:
-      - http: "PUT /forms/{proxy+}"
+      - http: "PUT /forms/{proxy}"
   deleteForm:
     handler: index.handler
     events:
-      - http: "DELETE /forms/{proxy+}"
+      - http: "DELETE /forms/{proxy}"
 
   getJSLib:
     handler: index.handler

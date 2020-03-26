@@ -179,7 +179,7 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
   res.render(
     viewFile,
     {
-      apiUrl: process.env.WEBRIQ_API_URL || "http://localhost:3000",
+      apiUrl: process.env.WEBRIQ_FORMS_API_URL || "http://localhost:3000",
       formNonces: JSON.stringify(formNonces),
       docsUrl: process.env.WEBRIQ_API_DOCS_URL || process.env.APP_URL + "/docs"
     },
@@ -275,6 +275,7 @@ exports.initLib = async (req, res) => {
 
       siteUrls.push(form.siteUrls);
     } catch (err) {
+      console.log("err", err);
       // unable to push nonce or siteUrls
       return {
         error: true,
@@ -303,6 +304,7 @@ exports.initLib = async (req, res) => {
   });
 
   siteUrls = uniq(flatten(siteUrls));
+  console.log("siteUrls", siteUrls);
 
   return {
     error: false,
@@ -320,14 +322,29 @@ exports.initLib = async (req, res) => {
  * GET /js/initForms
  */
 exports.getJSLib = async (req, res) => {
-  return this.prepareJSLib(req, res);
+  let lib;
+  try {
+    lib = this.prepareJSLib(req, res);
+    console.log("lib", lib);
+  } catch (error) {
+    console.log("error", error);
+  }
+
+  return lib;
 };
 
 /**
  * GET /js/initReactForms
  */
 exports.getReactJSLib = async (req, res) => {
-  return this.prepareJSLib(req, res, "jsReact");
+  let lib;
+  try {
+    lib = this.prepareJSLib(req, res, "jsReact");
+  } catch (error) {
+    console.log("error", error);
+  }
+
+  return lib;
 };
 
 const generateNonce = () => {
