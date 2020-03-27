@@ -116,20 +116,28 @@ exports.postFormSubmissions = async (req, res) => {
       doUpload(upload)
     );
 
-    await Promise.all(uploads).then(allUploads => {
-      console.log("allUploads", allUploads);
+    try {
+      return await Promise.all(uploads).then(allUploads => {
+        allUploads.forEach(upload => {
+          data["payload"][`${upload.fieldName}`] = upload && upload.url;
+          data.attachments.push(upload);
+        });
 
-      allUploads.forEach(upload => {
-        data["payload"][`${upload.fieldName}`] = upload && upload.url;
-        data.attachments.push(upload);
+        console.log("[OK] Uploads successful");
+
+        // @todo: update dynamodb here
+
+        console.log("data", data);
+        return data;
       });
+    } catch (err) {
+      console.log(
+        "[ERROR] Something went wrong processing uploads",
+        err && err.message
+      );
 
-      // @todo: update dynamodb here
-
-      console.log("data", data);
-    });
-
-    return data;
+      return data;
+    }
   };
 
   const sendEmails = data => {
@@ -174,6 +182,8 @@ exports.postFormSubmissions = async (req, res) => {
                 errors: [{ msg: err }]
               });
             }
+
+            console.log("[OK] Email sent to " + mailOptions.to);
           });
         }
       );
@@ -237,7 +247,7 @@ exports.postFormSubmissions = async (req, res) => {
       // Normal webhooks
       axios
         .post(hook.url, submissions)
-        .then(res => console.log("[OK] Webhook sent successfully!"))
+        .then(res => console.log("[OK] Webhook sent to " + hook.url))
         .catch(err => handleWebhookError(err));
     });
 
@@ -247,8 +257,10 @@ exports.postFormSubmissions = async (req, res) => {
   return createSubmission(data)
     .then(sendCreatedResponse)
     .then(processUploads)
-    .then(sendEmails)
-    .then(sendWebhooks)
+    .then(data => {
+      sendEmails(data);
+      sendWebhooks(data);
+    })
     .catch(error => {
       console.log(error);
       res.status(400).json({ error: "Could not create form submission!" });
