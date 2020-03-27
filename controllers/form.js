@@ -5,7 +5,11 @@ const get = require("lodash.get");
 const uuidValidate = require("uuid-validate");
 const JavaScriptObfuscator = require("javascript-obfuscator");
 
-const { FORMNONCES_TABLE, dynamoDb } = require("../config/constants");
+const {
+  FORMNONCES_TABLE,
+  dynamoDb,
+  IS_OFFLINE
+} = require("../config/constants");
 
 const { forms } = require("../services/db");
 
@@ -179,7 +183,9 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
   res.render(
     viewFile,
     {
-      apiUrl: process.env.WEBRIQ_FORMS_API_URL || "http://localhost:3000",
+      apiUrl: IS_OFFLINE
+        ? "http://localhost:3000/"
+        : process.env.WEBRIQ_FORMS_API_URL || "http://forms.webriq.com/",
       formNonces: JSON.stringify(formNonces),
       docsUrl: process.env.WEBRIQ_API_DOCS_URL || process.env.APP_URL + "/docs"
     },

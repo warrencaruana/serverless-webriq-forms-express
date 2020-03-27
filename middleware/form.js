@@ -1,10 +1,29 @@
 const get = require("lodash.get");
 const removeSiteProtocols = require("../helpers").removeSiteProtocols;
 
+function cleanupWebhook(webhook) {
+  if (webhook && !webhook.url) {
+    console.log("Invalid webhook without URL");
+    return null;
+  }
+
+  return {
+    url: webhook && webhook.url,
+    name: (webhook && webhook.name) || "New Webhook",
+    status:
+      (webhook &&
+        webhook.status &&
+        ["enabled", "disabled"].includes(webhook.status) &&
+        webhook.status) ||
+      "enabled"
+  };
+}
+
 exports.sanitizeFormData = (req, res, next) => {
   const to = get(req.body, "notifications.email.to", []);
   const cc = get(req.body, "notifications.email.cc", []);
   const bcc = get(req.body, "notifications.email.bcc", []);
+  const webhooks = get(req.body, "notifications.webhooks", []);
 
   if (to && typeof to === "string") {
     req.body.notifications.email.to = [to];
@@ -31,6 +50,11 @@ exports.sanitizeFormData = (req, res, next) => {
   // Cleanup HTTP protocols for site and test urls
   req.body.siteUrls = siteUrls.map(url => removeSiteProtocols(url));
   req.body.testUrls = testUrls.map(url => removeSiteProtocols(url));
+
+  // Cleanup webhooks
+  req.body.notifications.webhooks = webhooks.map(webhook =>
+    cleanupWebhook(webhook)
+  );
 
   // console.log("req.body", JSON.stringify(req.body, null, 2));
 

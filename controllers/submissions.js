@@ -81,6 +81,7 @@ exports.postFormSubmissions = async (req, res) => {
   };
 
   const sendCreatedResponse = data => {
+    console.log("data", data);
     res.status(201).json(sanitizeSubmissions(data));
 
     return data;
@@ -141,60 +142,68 @@ exports.postFormSubmissions = async (req, res) => {
   };
 
   const sendEmails = data => {
+    console.log("[OK] Start sending emails!");
     const emailTos = get(form, "notifications.email.to", []);
 
     const sendEmail = emailTo => {
-      if (!emailTo || !validator.isEmail(emailTo)) {
-        console.log(
-          "Email address To not set or invalid. Skipping sending emails..."
-        );
-        return;
-      }
+      return new Promise((resolve, reject) => {
+        if (!emailTo || !validator.isEmail(emailTo)) {
+          console.log(
+            "Email address To not set or invalid. Skipping sending emails..."
+          );
+          return;
+        }
 
-      res.render(
-        "mail",
-        { data, formName: form.name },
-        (err, submissionEmail) => {
-          if (err) {
-            // @todo: log as sending email processing failed
-            console.log("Email template processing failed!", err);
-            return;
-          }
-
-          // Send email
-          let mailOptions = {
-            to: form.notifications.email.to,
-            cc: form.notifications.email.cc || null,
-            bcc: form.notifications.email.bcc || null,
-            from: form.notifications.email.from || "no-reply@forms.webriq.com",
-            subject: form.notifications.email.subject
-              ? form.notifications.email.subject
-              : "New Form Submission via WebriQ Forms",
-            html: submissionEmail
-          };
-
-          mailer.sendMail(mailOptions, err => {
+        return res.render(
+          "mail",
+          { data, formName: form.name },
+          (err, submissionEmail) => {
             if (err) {
-              // @todo: log as sending email sending failed
-              console.log(err);
-              return res.status(400).json({
-                message: "Something went wrong",
-                errors: [{ msg: err }]
-              });
+              // @todo: log as sending email processing failed
+              console.log("Email template processing failed!", err);
+              return;
             }
 
-            console.log("[OK] Email sent to " + mailOptions.to);
-          });
-        }
-      );
+            // Send email
+            let mailOptions = {
+              to: form.notifications.email.to,
+              cc: form.notifications.email.cc || null,
+              bcc: form.notifications.email.bcc || null,
+              from:
+                form.notifications.email.from || "no-reply@forms.webriq.com",
+              subject: form.notifications.email.subject
+                ? form.notifications.email.subject
+                : "New Form Submission via WebriQ Forms",
+              html: submissionEmail
+            };
+
+            mailer.sendMail(mailOptions, err => {
+              if (err) {
+                // @todo: log as sending email sending failed
+                console.log({
+                  message: "Something went wrong",
+                  errors: [{ msg: err }]
+                });
+                reject(err);
+              }
+
+              console.log("[OK] Email sent to " + mailOptions.to);
+              resolve("OK");
+            });
+          }
+        );
+      });
     };
 
-    emailTos && emailTos.forEach(sendEmail);
-
-    return data;
+    return Promise.all(emailTos && emailTos.map(sendEmail)).then(all => {
+      console.log("all", all);
+      console.log("data", data);
+      return data;
+    });
   };
 
   const sendWebhooks = data => {
+    console.log("[OK] Start sending webhooks!");
     const submissions = data;
 
     get(form, "notifications.webhooks", []).forEach(hook => {
@@ -245,22 +254,29 @@ exports.postFormSubmissions = async (req, res) => {
       }
 
       // Normal webhooks
-      axios
+      return axios
         .post(hook.url, submissions)
         .then(res => console.log("[OK] Webhook sent to " + hook.url))
+        .then(() => {
+          return data;
+        })
         .catch(err => handleWebhookError(err));
     });
-
-    return data;
   };
 
   return createSubmission(data)
-    .then(sendCreatedResponse)
     .then(processUploads)
-    .then(data => {
-      sendEmails(data);
-      sendWebhooks(data);
+    .then(async data => {
+      console.log("sending notifications!");
+      return await Promise.all([sendEmails(data), sendWebhooks(data)])
+        .then(allData => {
+          return allData[0];
+        })
+        .catch(err => console.log("error", error));
+
+      // return data;
     })
+    .then(sendCreatedResponse)
     .catch(error => {
       console.log(error);
       res.status(400).json({ error: "Could not create form submission!" });
