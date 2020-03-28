@@ -17,8 +17,12 @@ exports.getFormSubmissions = (req, res) => {
   dynamoDb.scan(
     {
       TableName: FORM_SUBMISSIONS_TABLE,
-      Key: {
-        id: req.params.formId
+      FilterExpression: "#form = :form",
+      ExpressionAttributeNames: {
+        "#form": "_form"
+      },
+      ExpressionAttributeValues: {
+        ":form": req.params.formId
       }
     },
     (error, result) => {
