@@ -50,11 +50,10 @@ exports.sanitizeFormData = (req, res, next) => {
   // Cleanup HTTP protocols for site and test urls
   req.body.siteUrls = siteUrls.map(url => removeSiteProtocols(url));
   req.body.testUrls = testUrls.map(url => removeSiteProtocols(url));
-
-  // Cleanup webhooks
-  req.body.notifications.webhooks = webhooks.map(webhook =>
-    cleanupWebhook(webhook)
-  );
+  req.body.notifications = {
+    ...req.body.notifications,
+    ...{ webhooks: webhooks.map(webhook => cleanupWebhook(webhook)) }
+  };
 
   // console.log("req.body", JSON.stringify(req.body, null, 2));
 
