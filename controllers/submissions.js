@@ -328,21 +328,16 @@ exports.deleteFormSubmissionsByIdAndFormId = async (req, res) => {
 /**
  * DELETE /forms/:formId/submissions
  */
-exports.deleteFormSubmissionsByByFormId = (req, res) => {
-  dynamoDb.delete(
-    {
-      TableName: FORM_SUBMISSIONS_TABLE,
-      Key: {
-        _form: req.params.formId,
-      },
-    },
-    (error, result) => {
-      if (error) {
-        console.log(error);
-        res.status(400).json({ error: "Form submissions not found!" });
-      }
+exports.deleteFormSubmissionsByByFormId = async (req, res) => {
+  try {
+    const result = await submissions.deleteByFormId(req.params.formId);
 
-      res.status(204).json();
-    }
-  );
+    return res.status(204).json();
+  } catch (error) {
+    console.log("error", error);
+    return res.status(500).json({
+      error: "Could not delete submission!",
+      message: error && error.message,
+    });
+  }
 };

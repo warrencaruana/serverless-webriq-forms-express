@@ -258,6 +258,53 @@ const submissions = {
 
     return dynamoDb.delete(params).promise();
   },
+
+  deleteByFormId(formId) {
+    return new Promise(async (resolve, reject) => {
+      let submissions = [];
+      try {
+        submissions = await this.getByFormId(formId);
+      } catch (err) {
+        reject(err);
+      }
+
+      const itemsForDeletion = submissions.Items.map((submission) => {
+        return {
+          DeleteRequest: {
+            Key: {
+              _type: submission._type,
+              _timestamp: submission._timestamp,
+            },
+          },
+        };
+      });
+
+      const chunk = (arr, size) =>
+        Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+          arr.slice(i * size, i * size + size)
+        );
+
+      // batchWrite can only process 25 items of 1MB data
+      const submissionsOperation = chunk(itemsForDeletion, 25).map(
+        (submissions) => {
+          const params = {
+            RequestItems: {
+              [WEBRIQ_FORMS_TABLE]: submissions,
+            },
+          };
+
+          try {
+            return dynamoDb.batchWrite(params).promise();
+          } catch (error) {
+            console.log("error", error);
+            reject(err);
+          }
+        }
+      );
+
+      Promise.all(submissionsOperation).then((result) => resolve(result));
+    });
+  },
 };
 
 const nonces = {};
