@@ -8,7 +8,7 @@ const JavaScriptObfuscator = require("javascript-obfuscator");
 const {
   FORMNONCES_TABLE,
   dynamoDb,
-  IS_OFFLINE
+  IS_OFFLINE,
 } = require("../config/constants");
 
 const { forms } = require("../services/db");
@@ -19,7 +19,7 @@ const initialFormData = {
   referer: null,
   forms: [],
   formNonces: [],
-  siteUrls: []
+  siteUrls: [],
 };
 
 /**
@@ -30,7 +30,7 @@ exports.getForms = async (req, res) => {
     const result = await forms.all();
 
     if (result && result.Items) {
-      return res.json(result.Items.map(form => sanitizeForms(form)));
+      return res.json(sanitizeForms(result.Items));
     }
 
     return res.json([]);
@@ -48,7 +48,7 @@ exports.getFormsByURL = async (req, res) => {
     formsResult = await forms.getByUrl(req.params.id || req.params.url);
 
     if (formsResult && formsResult.Items) {
-      formsResult = formsResult.Items.map(form => sanitizeForms(form));
+      formsResult = sanitizeForms(formsResult.Items);
     }
 
     return res.status(200).json(sanitizeForms(formsResult));
@@ -56,17 +56,9 @@ exports.getFormsByURL = async (req, res) => {
     console.log("error", error);
     return res.status(500).json({
       error: true,
-      message: error && error.message
+      message: error && error.message,
     });
   }
-
-  // const formsData = forms.map(form => ({
-  //   id: form._id,
-  //   name: form.name,
-  //   recaptcha: {
-  //     key: get(form, "recaptcha.key", null)
-  //   }
-  // }));
 };
 
 /**
@@ -77,7 +69,7 @@ exports.getFormsByURL = async (req, res) => {
  * so can't rename to something else.
  */
 exports.getFormsByIdOrURL = async (req, res) => {
-  const isRequestParamValidId = val => uuidValidate(val, 4);
+  const isRequestParamValidId = (val) => uuidValidate(val, 4);
 
   if (!isRequestParamValidId(req.params.id)) {
     return this.getFormsByURL(req, res);
@@ -85,9 +77,10 @@ exports.getFormsByIdOrURL = async (req, res) => {
 
   try {
     const result = await forms.getById(req.params.id);
+    console.log("result", result);
 
-    if (result && result.Item) {
-      return res.json(sanitizeForms(result.Item));
+    if (result && result.Items) {
+      return res.json(sanitizeForms(result.Items[0]));
     }
 
     return res.status(404).json({ error: "Resource not found!" });
@@ -111,7 +104,7 @@ exports.postForms = async (req, res) => {
     console.log("error", error);
     res.status(400).json({
       error: "Could not create form!",
-      message: error && error.message
+      message: error && error.message,
     });
     return;
   }
@@ -125,10 +118,15 @@ exports.postForms = async (req, res) => {
 exports.putUpdateForms = async (req, res) => {
   const originalForm = req.formById;
   const id = req.params.id;
-  const data = constructFormData(req.body);
+  const data = constructFormData({
+    ...req.body,
+    _timestamp: originalForm._timestamp,
+  });
+  console.log("data", data);
 
   try {
     const result = await forms.update(id, data);
+    console.log("result", result);
 
     if (result) {
       res.status(200).json(sanitizeForms({ ...originalForm, ...result }));
@@ -137,7 +135,7 @@ exports.putUpdateForms = async (req, res) => {
     console.log("error", error);
     return res.status(500).json({
       error: "Could not update form!",
-      message: error && error.message
+      message: error && error.message,
     });
   }
 };
@@ -146,15 +144,17 @@ exports.putUpdateForms = async (req, res) => {
  * DELETE /forms/:id
  */
 exports.deleteFormsById = async (req, res) => {
+  const data = req.formById;
+  console.log("data", data);
   try {
-    const result = await forms.delete(req.params.id);
+    const result = await forms.delete(req.params.id, data);
 
     return res.status(204).json();
   } catch (error) {
     console.log("error", error);
     return res.status(500).json({
       error: "Could not delete form!",
-      message: error && error.message
+      message: error && error.message,
     });
   }
 };
@@ -163,7 +163,7 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
   const {
     error,
     message,
-    data: { formNonces, siteUrls, forms, referer }
+    data: { formNonces, siteUrls, forms, referer },
   } = await this.initLib(req, res);
 
   if (error) {
@@ -187,7 +187,7 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
         ? "http://localhost:3000/"
         : process.env.WEBRIQ_FORMS_API_URL || "http://forms.webriq.com/",
       formNonces: JSON.stringify(formNonces),
-      docsUrl: process.env.WEBRIQ_API_DOCS_URL || process.env.APP_URL + "/docs"
+      docsUrl: process.env.WEBRIQ_API_DOCS_URL || process.env.APP_URL + "/docs",
     },
     (err, js) => {
       if (err) {
@@ -204,7 +204,7 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
         selfDefending: true, // code resilient against formating and variable renaming
         domainLock: siteUrls, // prevents code executing from domain
         transformObjectKeys: true,
-        unicodeEscapeSequence: true
+        unicodeEscapeSequence: true,
       });
 
       // res.type("js").send(jsFile.getObfuscatedCode());
@@ -223,7 +223,7 @@ exports.initLib = async (req, res) => {
     return {
       error: true,
       message: "Unauthorized: unrecognized client!",
-      data: initialFormData
+      data: initialFormData,
     };
   }
 
@@ -247,7 +247,7 @@ exports.initLib = async (req, res) => {
     return {
       error: true,
       message: `WebriQ Forms: Site is not registered and/or ${referer}' is not present in its 'siteUrls'. When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${process.env.APP_URL}/docs for more info.`,
-      data: initialFormData
+      data: initialFormData,
     };
   }
 
@@ -262,21 +262,21 @@ exports.initLib = async (req, res) => {
   };
 
   // // Create _nonces
-  formsData.forEach(async form => {
+  formsData.forEach(async (form) => {
     const currentNonce = generateNonce();
     const tomorrowDate = getTomorrowsDate();
 
     let data = {
       _formId: form && form._id,
       token: currentNonce,
-      expiresAt: tomorrowDate.getTime() // timestamp
+      expiresAt: tomorrowDate.getTime(), // timestamp
     };
 
     // Push new _nonces and siteUrls
     try {
       formNonces.push({
         formId: form && form._id,
-        nonce: currentNonce
+        nonce: currentNonce,
       });
 
       siteUrls.push(form.siteUrls);
@@ -286,22 +286,22 @@ exports.initLib = async (req, res) => {
       return {
         error: true,
         message: "Unable to push nonce or siteUrls!",
-        data: []
+        data: [],
       };
     }
 
     const params = {
       TableName: FORMNONCES_TABLE,
-      Item: data
+      Item: data,
     };
 
-    dynamoDb.put(params, error => {
+    dynamoDb.put(params, (error) => {
       if (error) {
         console.log(error);
         return {
           error: true,
           message: "Unable to generate nonce for form!",
-          data: []
+          data: [],
         };
       }
 
@@ -319,8 +319,8 @@ exports.initLib = async (req, res) => {
       forms: formsData,
       referer,
       formNonces,
-      siteUrls
-    }
+      siteUrls,
+    },
   };
 };
 
@@ -355,11 +355,7 @@ exports.getReactJSLib = async (req, res) => {
 
 const generateNonce = () => {
   return (
-    Math.random()
-      .toString(36)
-      .substring(2, 15) +
-    Math.random()
-      .toString(36)
-      .substring(2, 15)
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
   );
 };

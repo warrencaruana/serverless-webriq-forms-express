@@ -8,7 +8,7 @@ const cors = require("cors");
 
 const options = {
   uploadDir: os.tmpdir(),
-  autoClean: true
+  autoClean: true,
 };
 
 app.use(formData.parse(options));
@@ -46,7 +46,11 @@ app.put(
   [submissionMiddleware.checkFormIdIsValid, formMiddleware.sanitizeFormData],
   form.putUpdateForms
 );
-app.delete("/forms/:id", form.deleteFormsById);
+app.delete(
+  "/forms/:id",
+  [submissionMiddleware.checkFormIdIsValid],
+  form.deleteFormsById
+);
 
 /**
  * Submissions
@@ -62,7 +66,7 @@ app.post(
     submissionMiddleware.checkFormIdIsValid,
     // submissionMiddleware.checkNonceIsValid,
     submissionMiddleware.checkSiteReferrerIsValid,
-    submissionMiddleware.checkBodyIsNotEmpty
+    submissionMiddleware.checkBodyIsNotEmpty,
   ],
   submission.postFormSubmissions
 );
@@ -73,7 +77,10 @@ app.delete(
 );
 app.delete(
   "/forms/:formId/submissions/:id",
-  [submissionMiddleware.checkFormIdIsValid],
+  [
+    // submissionMiddleware.checkFormIdIsValid,
+    submissionMiddleware.checkSubmissionIdIsValid,
+  ],
   submission.deleteFormSubmissionsByIdAndFormId
 );
 

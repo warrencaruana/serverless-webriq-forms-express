@@ -10,34 +10,27 @@ const {
   sanitizeSubmissions,
 } = require("../helpers");
 
+const { submissions } = require("../services/db");
+
 /**
  * GET /forms/:id/submissions
  */
-exports.getFormSubmissions = (req, res) => {
-  dynamoDb.scan(
-    {
-      TableName: FORM_SUBMISSIONS_TABLE,
-      FilterExpression: "#form = :form",
-      ExpressionAttributeNames: {
-        "#form": "_form",
-      },
-      ExpressionAttributeValues: {
-        ":form": req.params.formId,
-      },
-    },
-    (error, result) => {
-      if (error) {
-        console.log(error);
-        res.status(400).json({ error: "Forms submissions not found!" });
-      }
+exports.getFormSubmissions = async (req, res) => {
+  try {
+    const result = await submissions.getByFormId(req.params.formId);
 
-      if (result) {
-        res.json(sanitizeSubmissions(result.Items));
-      } else {
-        res.status(404).json({ error: "Forms submissions not found!" });
-      }
+    if (result && result.Items) {
+      return res.json(sanitizeSubmissions(result.Items));
     }
-  );
+
+    return res.json([]);
+  } catch (error) {
+    console.log("error", error);
+    return res.status(404).json({
+      error: "Forms submissions not found!",
+      message: error && error.message,
+    });
+  }
 };
 
 /**
@@ -64,23 +57,15 @@ exports.postFormSubmissions = async (req, res) => {
     return;
   }
 
-  const createSubmission = async (data) => {
-    return new Promise((resolve, reject) => {
-      dynamoDb.put(
-        {
-          TableName: FORM_SUBMISSIONS_TABLE,
-          Item: data,
-        },
-        (error, result) => {
-          if (error) {
-            console.log(error);
-            reject(error);
-          }
+  const createSubmission = (data) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        await submissions.create(data);
 
-          console.log("data create", data);
-          resolve(data);
-        }
-      );
+        resolve(data);
+      } catch (error) {
+        reject(error);
+      }
     });
   };
 
@@ -294,52 +279,50 @@ exports.postFormSubmissions = async (req, res) => {
 /**
  * GET /forms/:formId/submissions/:id
  */
-exports.getFormSubmissionsByIdAndFormId = (req, res) => {
-  dynamoDb.get(
-    {
-      TableName: FORM_SUBMISSIONS_TABLE,
-      Key: {
-        _id: req.params.id,
-        _form: req.params.formId,
-      },
-    },
-    (error, result) => {
-      console.log("result", result);
-      if (error) {
-        console.log(error);
-        res.status(400).json({ error: "Form submission not found!" });
-      }
+exports.getFormSubmissionsByIdAndFormId = async (req, res) => {
+  try {
+    let result = [];
+    result = await submissions.getByFormIdAndId(
+      req.params.formId,
+      req.params.id
+    );
 
-      if (result) {
-        res.json(sanitizeSubmissions(result.Item));
-      } else {
-        res.status(404).json({ error: "Form submission not found!" });
-      }
+    if (result && result.Items) {
+      result = sanitizeSubmissions(result.Items[0]);
     }
-  );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.log("error", error);
+    return res.status(500).json({
+      error: true,
+      message: error && error.message,
+    });
+  }
 };
 
 /**
  * DELETE /forms/:formId/submissions/:id
  */
-exports.deleteFormSubmissionsByIdAndFormId = (req, res) => {
-  dynamoDb.delete(
-    {
-      TableName: FORM_SUBMISSIONS_TABLE,
-      Key: {
-        _id: req.params.id,
-        _form: req.params.formId,
-      },
-    },
-    (error, result) => {
-      if (error) {
-        console.log(error);
-        res.status(400).json({ error: "Form submission not found!" });
-      }
+exports.deleteFormSubmissionsByIdAndFormId = async (req, res) => {
+  const data = req.submissionById;
+  console.log("data", data);
 
-      res.status(204).json();
-    }
-  );
+  try {
+    const result = await submissions.deleteByFormIdAndId(
+      req.params.formId,
+      req.params.id,
+      data
+    );
+
+    return res.status(204).json();
+  } catch (error) {
+    console.log("error", error);
+    return res.status(500).json({
+      error: "Could not delete submission!",
+      message: error && error.message,
+    });
+  }
 };
 
 /**
