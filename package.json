@@ -31,7 +31,18 @@
     "uuid-validate": "0.0.3"
   },
   "devDependencies": {
+    "husky": "^4.2.3",
+    "lint-staged": "^10.1.1",
+    "prettier": "^2.0.2",
     "serverless-dynamodb-local": "^0.2.39",
     "serverless-offline": "^5.12.1"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,css,html,md}": "prettier --write"
   }
 }
