@@ -7,7 +7,7 @@ const { FORM_SUBMISSIONS_TABLE, dynamoDb } = require("../config/constants");
 const { fileTransport, mailer } = require("../services");
 const {
   constructFormSubmissionData,
-  sanitizeSubmissions
+  sanitizeSubmissions,
 } = require("../helpers");
 
 /**
@@ -19,11 +19,11 @@ exports.getFormSubmissions = (req, res) => {
       TableName: FORM_SUBMISSIONS_TABLE,
       FilterExpression: "#form = :form",
       ExpressionAttributeNames: {
-        "#form": "_form"
+        "#form": "_form",
       },
       ExpressionAttributeValues: {
-        ":form": req.params.formId
-      }
+        ":form": req.params.formId,
+      },
     },
     (error, result) => {
       if (error) {
@@ -51,11 +51,11 @@ exports.postFormSubmissions = async (req, res) => {
   const [{ error, message }, data] = constructFormSubmissionData({
     data: {
       ...req.body,
-      formId: req.params.formId
+      formId: req.params.formId,
     },
     attachments: {
-      ...req.files
-    }
+      ...req.files,
+    },
   });
   const formData = data;
 
@@ -64,12 +64,12 @@ exports.postFormSubmissions = async (req, res) => {
     return;
   }
 
-  const createSubmission = async data => {
+  const createSubmission = async (data) => {
     return new Promise((resolve, reject) => {
       dynamoDb.put(
         {
           TableName: FORM_SUBMISSIONS_TABLE,
-          Item: data
+          Item: data,
         },
         (error, result) => {
           if (error) {
@@ -84,17 +84,17 @@ exports.postFormSubmissions = async (req, res) => {
     });
   };
 
-  const sendCreatedResponse = data => {
+  const sendCreatedResponse = (data) => {
     console.log("data", data);
     res.status(201).json(sanitizeSubmissions(data));
 
     return data;
   };
 
-  const processUploads = async data => {
+  const processUploads = async (data) => {
     const fileSizeLimit = bytes((form && form.uploadSize) || 0);
 
-    const doUpload = upload => {
+    const doUpload = (upload) => {
       return new Promise((resolve, reject) => {
         if (upload.size > fileSizeLimit) {
           reject("Skipping file upload due to size!");
@@ -103,12 +103,12 @@ exports.postFormSubmissions = async (req, res) => {
 
         const file = fileTransport
           .upload(upload.path)
-          .then(fileupload => {
+          .then((fileupload) => {
             attachData = {
               fieldName: upload.fieldName,
               file_type: upload.type,
               public_id: fileupload.public_id,
-              url: fileupload.secure_url
+              url: fileupload.secure_url,
             };
 
             resolve(attachData);
@@ -122,8 +122,8 @@ exports.postFormSubmissions = async (req, res) => {
     );
 
     try {
-      return await Promise.all(uploads).then(allUploads => {
-        allUploads.forEach(upload => {
+      return await Promise.all(uploads).then((allUploads) => {
+        allUploads.forEach((upload) => {
           data["payload"][`${upload.fieldName}`] = upload && upload.url;
           data.attachments.push(upload);
         });
@@ -145,11 +145,14 @@ exports.postFormSubmissions = async (req, res) => {
     }
   };
 
-  const sendEmails = data => {
+  const sendEmails = (data) => {
     console.log("[OK] Start sending emails!");
     const emailTos = get(form, "notifications.email.to", []);
+    console.log("emailTos", emailTos);
 
-    const sendEmail = emailTo => {
+    emailTos.map((email) => console.log(email));
+
+    const sendEmail = (emailTo) => {
       return new Promise((resolve, reject) => {
         if (!emailTo || !validator.isEmail(emailTo)) {
           console.log(
@@ -170,7 +173,7 @@ exports.postFormSubmissions = async (req, res) => {
 
             // Send email
             let mailOptions = {
-              to: form.notifications.email.to,
+              to: emailTo,
               cc: form.notifications.email.cc || null,
               bcc: form.notifications.email.bcc || null,
               from:
@@ -178,15 +181,15 @@ exports.postFormSubmissions = async (req, res) => {
               subject: form.notifications.email.subject
                 ? form.notifications.email.subject
                 : "New Form Submission via WebriQ Forms",
-              html: submissionEmail
+              html: submissionEmail,
             };
 
-            mailer.sendMail(mailOptions, err => {
+            mailer.sendMail(mailOptions, (err) => {
               if (err) {
                 // @todo: log as sending email sending failed
                 console.log({
                   message: "Something went wrong",
-                  errors: [{ msg: err }]
+                  errors: [{ msg: err }],
                 });
                 reject(err);
               }
@@ -199,18 +202,18 @@ exports.postFormSubmissions = async (req, res) => {
       });
     };
 
-    return Promise.all(emailTos && emailTos.map(sendEmail)).then(all => {
+    return Promise.all(emailTos.map(sendEmail)).then((all) => {
       console.log("all", all);
       console.log("data", data);
       return data;
     });
   };
 
-  const sendWebhooks = data => {
+  const sendWebhooks = (data) => {
     console.log("[OK] Start sending webhooks!");
     const submissions = data;
 
-    get(form, "notifications.webhooks", []).forEach(hook => {
+    get(form, "notifications.webhooks", []).forEach((hook) => {
       if (hook.status !== "enabled") {
         return;
       }
@@ -239,49 +242,50 @@ exports.postFormSubmissions = async (req, res) => {
       if (hook && hook.url.includes("hooks.slack.com")) {
         const payload = submissions && submissions.payload;
         const slackText =
-          `New form submission from ${(form && form.name) ||
-            "Form"}\n\nDetails below:\n--------------\n` +
+          `New form submission from ${
+            (form && form.name) || "Form"
+          }\n\nDetails below:\n--------------\n` +
           Object.keys(payload)
-            .map(key => key + ": " + payload[key])
+            .map((key) => key + ": " + payload[key])
             .join("\n");
 
         axios({
           method: "post",
           url: hook.url,
           data: {
-            text: slackText
-          }
+            text: slackText,
+          },
         })
-          .then(res => console.log("[OK] Slack webhook sent!"))
-          .catch(err => handleWebhookError(err));
+          .then((res) => console.log("[OK] Slack webhook sent!"))
+          .catch((err) => handleWebhookError(err));
         return;
       }
 
       // Normal webhooks
       return axios
         .post(hook.url, submissions)
-        .then(res => console.log("[OK] Webhook sent to " + hook.url))
+        .then((res) => console.log("[OK] Webhook sent to " + hook.url))
         .then(() => {
           return data;
         })
-        .catch(err => handleWebhookError(err));
+        .catch((err) => handleWebhookError(err));
     });
   };
 
   return createSubmission(data)
     .then(processUploads)
-    .then(async data => {
+    .then(async (data) => {
       console.log("sending notifications!");
       return await Promise.all([sendEmails(data), sendWebhooks(data)])
-        .then(allData => {
+        .then((allData) => {
           return allData[0];
         })
-        .catch(err => console.log("error", error));
+        .catch((err) => console.log("error", error));
 
       // return data;
     })
     .then(sendCreatedResponse)
-    .catch(error => {
+    .catch((error) => {
       console.log(error);
       res.status(400).json({ error: "Could not create form submission!" });
     });
@@ -296,8 +300,8 @@ exports.getFormSubmissionsByIdAndFormId = (req, res) => {
       TableName: FORM_SUBMISSIONS_TABLE,
       Key: {
         _id: req.params.id,
-        _form: req.params.formId
-      }
+        _form: req.params.formId,
+      },
     },
     (error, result) => {
       console.log("result", result);
@@ -324,8 +328,8 @@ exports.deleteFormSubmissionsByIdAndFormId = (req, res) => {
       TableName: FORM_SUBMISSIONS_TABLE,
       Key: {
         _id: req.params.id,
-        _form: req.params.formId
-      }
+        _form: req.params.formId,
+      },
     },
     (error, result) => {
       if (error) {
@@ -346,8 +350,8 @@ exports.deleteFormSubmissionsByByFormId = (req, res) => {
     {
       TableName: FORM_SUBMISSIONS_TABLE,
       Key: {
-        _form: req.params.formId
-      }
+        _form: req.params.formId,
+      },
     },
     (error, result) => {
       if (error) {
