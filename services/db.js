@@ -9,14 +9,6 @@ const {
   dynamoDb,
 } = require("../config/constants");
 
-const attachFormKeys = (data) => {
-  return {
-    _type: "FORM",
-    _timestamp: new Date().getTime() / 1000,
-    ...data,
-  };
-};
-
 const forms = {
   all() {
     const params = {
@@ -307,7 +299,81 @@ const submissions = {
   },
 };
 
-const nonces = {};
+const nonces = {
+  all() {
+    const params = {
+      TableName: WEBRIQ_FORMS_TABLE,
+      KeyConditionExpression: "#type = :type",
+      ExpressionAttributeNames: {
+        "#type": "_type",
+      },
+      ExpressionAttributeValues: {
+        ":type": "NONCE",
+      },
+      ScanIndexForward: false,
+    };
+
+    return dynamoDb.query(params).promise();
+  },
+
+  getByToken(token) {
+    console.log("here");
+    const params = {
+      TableName: WEBRIQ_FORMS_TABLE,
+      KeyConditionExpression: "#type = :type",
+      FilterExpression: "#token = :token",
+      ExpressionAttributeNames: {
+        "#type": "_type",
+        "#token": "token",
+      },
+      ExpressionAttributeValues: {
+        ":type": "NONCE",
+        ":token": token,
+      },
+    };
+    console.log("params", params);
+
+    return dynamoDb.query(params).promise();
+  },
+
+  create(data) {
+    const params = {
+      TableName: WEBRIQ_FORMS_TABLE,
+      Item: data,
+    };
+
+    return new Promise((resolve, reject) => {
+      dynamoDb.put(params, (error, result) => {
+        if (error) {
+          console.log(error);
+          reject(error);
+        }
+
+        resolve(data);
+      });
+    });
+  },
+
+  delete(id, data) {
+    const params = {
+      TableName: WEBRIQ_FORMS_TABLE,
+      Key: {
+        _type: "NONCE",
+        _timestamp: data._timestamp,
+      },
+      ConditionExpression: "#id = :id",
+      ExpressionAttributeNames: {
+        "#id": "_id",
+      },
+      ExpressionAttributeValues: {
+        ":id": id,
+      },
+    };
+    console.log("params", params);
+
+    return dynamoDb.delete(params).promise();
+  },
+};
 
 module.exports = {
   forms,

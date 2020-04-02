@@ -64,7 +64,7 @@ app.post(
   "/forms/:formId/submissions",
   [
     submissionMiddleware.checkFormIdIsValid,
-    // submissionMiddleware.checkNonceIsValid,
+    submissionMiddleware.checkNonceIsValid,
     submissionMiddleware.checkSiteReferrerIsValid,
     submissionMiddleware.checkBodyIsNotEmpty,
   ],
@@ -88,6 +88,11 @@ app.delete(
  * Nonces
  */
 app.get("/formnonces", nonce.getNonces);
+app.delete(
+  "/formnonces/:id",
+  submissionMiddleware.checkNonceIsValid,
+  nonce.deleteNonce
+);
 
 /**
  * JS Library

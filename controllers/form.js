@@ -11,9 +11,13 @@ const {
   IS_OFFLINE,
 } = require("../config/constants");
 
-const { forms } = require("../services/db");
+const { forms, nonces } = require("../services/db");
 
-const { constructFormData, sanitizeForms } = require("../helpers");
+const {
+  constructFormData,
+  constructNonceData,
+  sanitizeForms,
+} = require("../helpers");
 
 const initialFormData = {
   referer: null,
@@ -122,7 +126,6 @@ exports.putUpdateForms = async (req, res) => {
     ...req.body,
     _timestamp: originalForm._timestamp,
   });
-  console.log("data", data);
 
   try {
     const result = await forms.update(id, data);
@@ -254,23 +257,9 @@ exports.initLib = async (req, res) => {
   let formNonces = [];
   let siteUrls = [];
 
-  const getTomorrowsDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return tomorrow;
-  };
-
   // // Create _nonces
   formsData.forEach(async (form) => {
     const currentNonce = generateNonce();
-    const tomorrowDate = getTomorrowsDate();
-
-    let data = {
-      _formId: form && form._id,
-      token: currentNonce,
-      expiresAt: tomorrowDate.getTime(), // timestamp
-    };
 
     // Push new _nonces and siteUrls
     try {
@@ -290,23 +279,41 @@ exports.initLib = async (req, res) => {
       };
     }
 
-    const params = {
-      TableName: FORMNONCES_TABLE,
-      Item: data,
-    };
+    let data = constructNonceData({
+      token: currentNonce,
+      _form: form && form._id,
+    });
 
-    dynamoDb.put(params, (error) => {
-      if (error) {
-        console.log(error);
-        return {
-          error: true,
-          message: "Unable to generate nonce for form!",
-          data: [],
-        };
-      }
+    try {
+      const createNonce = await nonces.create(data);
+      console.log("createNonce", createNonce);
 
       console.log(`Successfully created nonce: ${currentNonce}`);
-    });
+    } catch (error) {
+      console.log(error);
+      return {
+        error: true,
+        message: "Unable to generate nonce for form!",
+        data: [],
+      };
+    }
+
+    // const params = {
+    //   TableName: FORMNONCES_TABLE,
+    //   Item: data,
+    // };
+    // dynamoDb.put(params, (error) => {
+    //   if (error) {
+    //     console.log(error);
+    //     return {
+    //       error: true,
+    //       message: "Unable to generate nonce for form!",
+    //       data: [],
+    //     };
+    //   }
+
+    //   console.log(`Successfully created nonce: ${currentNonce}`);
+    // });
   });
 
   siteUrls = uniq(flatten(siteUrls));

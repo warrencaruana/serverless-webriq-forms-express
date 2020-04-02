@@ -1,5 +1,5 @@
 const get = require("lodash.get");
-const removeSiteProtocols = require("../helpers").removeSiteProtocols;
+const { removeSiteProtocols } = require("../helpers");
 
 function cleanupWebhook(webhook) {
   if (webhook && !webhook.url) {
@@ -15,7 +15,7 @@ function cleanupWebhook(webhook) {
         webhook.status &&
         ["enabled", "disabled"].includes(webhook.status) &&
         webhook.status) ||
-      "enabled"
+      "enabled",
   };
 }
 
@@ -48,11 +48,11 @@ exports.sanitizeFormData = (req, res, next) => {
   }
 
   // Cleanup HTTP protocols for site and test urls
-  req.body.siteUrls = siteUrls.map(url => removeSiteProtocols(url));
-  req.body.testUrls = testUrls.map(url => removeSiteProtocols(url));
+  req.body.siteUrls = siteUrls.map((url) => removeSiteProtocols(url));
+  req.body.testUrls = testUrls.map((url) => removeSiteProtocols(url));
   req.body.notifications = {
     ...req.body.notifications,
-    ...{ webhooks: webhooks.map(webhook => cleanupWebhook(webhook)) }
+    ...{ webhooks: webhooks.map((webhook) => cleanupWebhook(webhook)) },
   };
 
   // console.log("req.body", JSON.stringify(req.body, null, 2));

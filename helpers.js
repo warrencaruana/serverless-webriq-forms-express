@@ -14,7 +14,6 @@ const constructFormData = (data) => {
     siteUrls: get(data, "siteUrls", []),
     testUrls: get(data, "testUrls", []),
     tags: get(data, "tags", []),
-    formNonces: get(data, "formNonces", []),
     recaptcha: {
       key: get(data, "recaptcha.key", process.env.APP_DEFAULT_RECAPTCHA_KEY),
       secret: get(
@@ -55,6 +54,8 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
   formData = omit(formData, "g-recaptcha-response");
   formData = omit(formData, "formId");
   formData = omit(formData, "_nonce");
+  formData = omit(formData, "Referer");
+  formData = omit(formData, "Origin");
 
   if (Object.entries(attachments).length > 0) {
     Object.entries(attachments).forEach(([index, upload]) => {
@@ -78,6 +79,27 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
       updatedAt: now.toISOString(),
     },
   ];
+};
+
+const constructNonceData = (data) => {
+  const _id = uuid();
+  const now = new Date();
+  const getTomorrowsDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return tomorrow;
+  };
+  const tomorrowDate = getTomorrowsDate();
+
+  return {
+    _id,
+    _type: "NONCE",
+    _timestamp: get(data, "_timestamp", Math.round(now / 1000)),
+    expiresAt: Math.round(tomorrowDate / 1000),
+    token: get(data, "token"),
+    _form: get(data, "_form"),
+  };
 };
 
 const sanitizeForms = (json) => {
@@ -141,6 +163,7 @@ const removeSiteProtocols = (urls) => {
 module.exports = {
   constructFormData,
   constructFormSubmissionData,
+  constructNonceData,
   removeSiteProtocols,
   sanitizeForms,
   sanitizeSubmissions,

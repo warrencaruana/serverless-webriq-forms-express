@@ -8,7 +8,7 @@ const {
   dynamoDb,
 } = require("../config/constants");
 
-const { forms, submissions } = require("../services/db");
+const { forms, submissions, nonces } = require("../services/db");
 const { removeSiteProtocols } = require("../helpers");
 
 exports.checkBodyIsNotEmpty = async (req, res, next) => {
@@ -38,29 +38,38 @@ exports.checkNonceIsValid = async (req, res, next) => {
     });
   }
 
-  const nonceItem = await dynamoDb
-    .get({
-      TableName: FORMNONCES_TABLE,
-      Key: {
-        token: _nonce,
-      },
-    })
-    .promise();
+  let nonceItem = null;
 
-  if (!nonceItem || !nonceItem.Item) {
+  try {
+    nonceItem = await nonces.getByToken(_nonce);
+  } catch (err) {
+    console.log("err", err);
+    return res.status(500).json({
+      message: "Something went validating security feature!",
+    });
+  }
+  console.log("nonceItem", nonceItem);
+
+  if (
+    !nonceItem ||
+    !nonceItem.Items ||
+    (nonceItem.Items && nonceItem.Items.length !== 1)
+  ) {
     return res.status(403).json({
       message:
-        "Unauthorized to perform form submission because _nonce is invalid or not found!",
+        "Unauthorized to perform form submission because security feature is invalid or not found!",
     });
   }
 
   const hasNonceExpired = (expiryDate) => {
-    return new Date().getTime() > expiryDate;
+    const nowEpochDate = Math.round(new Date() / 1000);
+
+    return nowEpochDate > expiryDate;
   };
 
-  if (hasNonceExpired(nonceItem.Item.expiryDate)) {
+  if (hasNonceExpired(nonceItem.Items[0].expiresAt)) {
     return res.status(400).json({
-      message: "Form nonce has expired. Please try again!",
+      message: "Security feature has expired. Please try again!",
     });
   }
 
@@ -72,6 +81,9 @@ exports.checkNonceIsValid = async (req, res, next) => {
     });
   }
 
+  // Save nonce
+  req.nonceById = nonceItem.Items[0];
+
   next();
 };
 
@@ -80,7 +92,7 @@ exports.checkSubmissionIdIsValid = async (req, res, next) => {
     req.params.formId,
     req.params.id
   );
-  console.log("submissionById", submissionById);
+  // console.log("submissionById", submissionById);
 
   if (!submissionById || !submissionById.Items) {
     res.status(404).json({
@@ -96,12 +108,12 @@ exports.checkSubmissionIdIsValid = async (req, res, next) => {
 };
 
 exports.checkFormIdIsValid = async (req, res, next) => {
-  console.log(
-    "req.params.formId || req.params.id",
-    req.params.formId || req.params.id
-  );
+  // console.log(
+  //   "req.params.formId || req.params.id",
+  //   req.params.formId || req.params.id
+  // );
   const formById = await forms.getById(req.params.formId || req.params.id);
-  console.log("formById", formById);
+  // console.log("formById", formById);
 
   if (!formById || !formById.Items) {
     res.status(404).json({

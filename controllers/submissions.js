@@ -10,7 +10,7 @@ const {
   sanitizeSubmissions,
 } = require("../helpers");
 
-const { submissions } = require("../services/db");
+const { submissions, nonces } = require("../services/db");
 
 /**
  * GET /forms/:id/submissions
@@ -65,6 +65,24 @@ exports.postFormSubmissions = async (req, res) => {
         resolve(data);
       } catch (error) {
         reject(error);
+      }
+    });
+  };
+
+  const deleteNonce = (data) => {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!req.nonceById) {
+          reject("Nonce not found!");
+        }
+
+        nonces.delete(req.nonceById._id, req.nonceById);
+
+        console.log("[OK] Nonce is deleted!");
+        resolve(data);
+      } catch (err) {
+        console.log("err", err);
+        reject(err);
       }
     });
   };
@@ -257,8 +275,9 @@ exports.postFormSubmissions = async (req, res) => {
     });
   };
 
-  return createSubmission(data)
-    .then(processUploads)
+  return processUploads(data)
+    .then(createSubmission)
+    .then(deleteNonce)
     .then(async (data) => {
       console.log("sending notifications!");
       return await Promise.all([sendEmails(data), sendWebhooks(data)])
@@ -286,6 +305,13 @@ exports.getFormSubmissionsByIdAndFormId = async (req, res) => {
       req.params.formId,
       req.params.id
     );
+    console.log("result", result);
+
+    if (result && result.Count < 1) {
+      return res.status(404).json({
+        message: "Resource not found!",
+      });
+    }
 
     if (result && result.Items) {
       result = sanitizeSubmissions(result.Items[0]);
