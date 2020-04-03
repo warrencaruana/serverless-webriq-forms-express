@@ -1,11 +1,8 @@
 org: dorelljames
-service: wfv2-test2-serverless
+service: webriqforms-test2-serverless
 
 custom:
-  WebriQ_Forms_TableName: "wfv2-test2-webriq-forms-table-${self:provider.stage}"
-  WF_Forms_TableName: "wfv2-test2-forms-table-${self:provider.stage}"
-  WF_FormSubmissions_TableName: "wfv2-test2-form_submissions-table-${self:provider.stage}"
-  WF_FormNonces_TableName: "wfv2-test2-form_nonces-table-${self:provider.stage}"
+  WebriQ_Forms_TableName: "webriqforms-test2-table-${self:provider.stage}"
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:
@@ -30,14 +27,8 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - { "Fn::GetAtt": ["WebriQFormsDynamoDBTable", "Arn"] }
-        - { "Fn::GetAtt": ["FormsDynamoDBTable", "Arn"] }
-        - { "Fn::GetAtt": ["SubmissionsDynamoDBTable", "Arn"] }
-        - { "Fn::GetAtt": ["FormNoncesDynamoDBTable", "Arn"] }
   environment:
     WEBRIQ_FORMS_TABLE: ${self:custom.WebriQ_Forms_TableName}
-    FORMS_TABLE: ${self:custom.WF_Forms_TableName}
-    FORMNONCES_TABLE: ${self:custom.WF_FormNonces_TableName}
-    FORM_SUBMISSIONS_TABLE: ${self:custom.WF_FormSubmissions_TableName}
     APP_URL: https://forms.webriq.com
     APP_STAGE: ${self:custom.stage}
     APP_DEFAULT_RECAPTCHA_KEY: 6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8
@@ -135,54 +126,14 @@ resources:
         AttributeDefinitions:
           - AttributeName: _type
             AttributeType: S
-          - AttributeName: _timestamp
+          - AttributeName: timestamp
             AttributeType: N
         KeySchema:
           - AttributeName: _type
             KeyType: HASH
-          - AttributeName: _timestamp
+          - AttributeName: timestamp
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TimeToLiveSpecification:
-          - AttributeName: expiresAt
-            Enabled: Boolean
-
-    FormsDynamoDBTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        TableName: ${self:custom.WF_Forms_TableName}
-        AttributeDefinitions:
-          - AttributeName: _id
-            AttributeType: S
-        KeySchema:
-          - AttributeName: _id
-            KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
-
-    SubmissionsDynamoDBTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        TableName: ${self:custom.WF_FormSubmissions_TableName}
-        AttributeDefinitions:
-          - AttributeName: _id
-            AttributeType: S
-          - AttributeName: _form
-            AttributeType: S
-        KeySchema:
-          - AttributeName: _id
-            KeyType: HASH
-          - AttributeName: _form
-            KeyType: RANGE
-        BillingMode: PAY_PER_REQUEST
-
-    FormNoncesDynamoDBTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        TableName: ${self:custom.WF_FormNonces_TableName}
-        AttributeDefinitions:
-          - AttributeName: token
-            AttributeType: S
-        KeySchema:
-          - AttributeName: token
-            KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
+          AttributeName: expiresAt
+          Enabled: true
