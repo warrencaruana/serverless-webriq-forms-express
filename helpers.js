@@ -9,7 +9,7 @@ const constructFormData = (data) => {
   return {
     _id,
     _type: "FORM",
-    _timestamp: get(data, "_timestamp", Math.round(now / 1000)),
+    timestamp: get(data, "timestamp", Math.round(now / 1000)),
     name: get(data, "name", "WebriQ Form"),
     siteUrls: get(data, "siteUrls", []),
     testUrls: get(data, "testUrls", []),
@@ -71,7 +71,7 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
     {
       _id,
       _type: "SUBMISSION",
-      _timestamp: Math.round(now / 1000),
+      timestamp: Math.round(now / 1000),
       _form: formId,
       payload: formData,
       attachments: [],
@@ -95,8 +95,10 @@ const constructNonceData = (data) => {
   return {
     _id,
     _type: "NONCE",
-    _timestamp: get(data, "_timestamp", Math.round(now / 1000)),
+    timestamp: get(data, "timestamp", Math.round(now / 1000)),
     expiresAt: Math.round(tomorrowDate / 1000),
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
     token: get(data, "token"),
     _form: get(data, "_form"),
   };
@@ -108,7 +110,7 @@ const sanitizeForms = (json) => {
     for (let i = json.length - 1; i >= 0; i--) {
       str[i] = JSON.stringify(json[i]);
       str[i] = str[i].replace(/\"_id\":/g, '"id":');
-      str[i] = str[i].replace(/\"_timestamp\":/g, '"timestamp":');
+      str[i] = str[i].replace(/\"timestamp\":/g, '"timestamp":');
       str[i] = str[i].replace(/\"_type\":/g, '"type":');
       json[i] = JSON.parse(str[i]);
     }
@@ -116,7 +118,7 @@ const sanitizeForms = (json) => {
     let str;
     str = JSON.stringify(json);
     str = str.replace(/\"_id\":/g, '"id":');
-    str = str.replace(/\"_timestamp\":/g, '"timestamp":');
+    str = str.replace(/\"timestamp\":/g, '"timestamp":');
     str = str.replace(/\"_type\":/g, '"type":');
     json = JSON.parse(str);
   }
@@ -132,7 +134,7 @@ const sanitizeSubmissions = (json) => {
       str[i] = str[i].replace(/\"_id\":/g, '"id":');
       str[i] = str[i].replace(/\"_form\":/g, '"form":');
       str[i] = str[i].replace(/\"_type\":/g, '"type":');
-      str[i] = str[i].replace(/\"_timestamp\":/g, '"timestamp":');
+      str[i] = str[i].replace(/\"timestamp\":/g, '"timestamp":');
       json[i] = JSON.parse(str[i]);
     }
   } else {
@@ -141,7 +143,7 @@ const sanitizeSubmissions = (json) => {
     str = str.replace(/\"_id\":/g, '"id":');
     str = str.replace(/\"_form\":/g, '"form":');
     str = str.replace(/\"_type\":/g, '"type":');
-    str = str.replace(/\"_timestamp\":/g, '"timestamp":');
+    str = str.replace(/\"timestamp\":/g, '"timestamp":');
     json = JSON.parse(str);
   }
 

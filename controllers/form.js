@@ -124,7 +124,7 @@ exports.putUpdateForms = async (req, res) => {
   const id = req.params.id;
   const data = constructFormData({
     ...req.body,
-    _timestamp: originalForm._timestamp,
+    timestamp: originalForm.timestamp,
   });
 
   try {
@@ -182,6 +182,32 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
   }
 
   console.log(process.env.WEBRIQ_API_URL || "http://localhost:3000");
+
+  const createNonces = formNonces.map(async (formNonce) => {
+    console.log("formNonce", formNonce);
+    let data = constructNonceData({
+      token: formNonce.nonce,
+      _form: formNonce.formId,
+    });
+
+    try {
+      const createNonce = await nonces.create(data);
+      console.log("createNonce", createNonce);
+
+      console.log(`Successfully created nonce: ${formNonce.nonce}`);
+    } catch (error) {
+      console.log(error);
+      return {
+        error: true,
+        message: "Unable to generate nonce for form!",
+        data: [],
+      };
+    }
+  });
+
+  await Promise.all(createNonces).then(() => {
+    console.log("Successfully created nonces!");
+  });
 
   res.render(
     viewFile,
@@ -279,24 +305,24 @@ exports.initLib = async (req, res) => {
       };
     }
 
-    let data = constructNonceData({
-      token: currentNonce,
-      _form: form && form._id,
-    });
+    // let data = constructNonceData({
+    //   token: currentNonce,
+    //   _form: form && form._id,
+    // });
 
-    try {
-      const createNonce = await nonces.create(data);
-      console.log("createNonce", createNonce);
+    // try {
+    //   const createNonce = await nonces.create(data);
+    //   console.log("createNonce", createNonce);
 
-      console.log(`Successfully created nonce: ${currentNonce}`);
-    } catch (error) {
-      console.log(error);
-      return {
-        error: true,
-        message: "Unable to generate nonce for form!",
-        data: [],
-      };
-    }
+    //   console.log(`Successfully created nonce: ${currentNonce}`);
+    // } catch (error) {
+    //   console.log(error);
+    //   return {
+    //     error: true,
+    //     message: "Unable to generate nonce for form!",
+    //     data: [],
+    //   };
+    // }
 
     // const params = {
     //   TableName: FORMNONCES_TABLE,
@@ -335,15 +361,12 @@ exports.initLib = async (req, res) => {
  * GET /js/initForms
  */
 exports.getJSLib = async (req, res) => {
-  let lib;
   try {
-    lib = this.prepareJSLib(req, res);
+    return this.prepareJSLib(req, res);
     console.log("lib", lib);
   } catch (error) {
     console.log("error", error);
   }
-
-  return lib;
 };
 
 /**
@@ -352,7 +375,7 @@ exports.getJSLib = async (req, res) => {
 exports.getReactJSLib = async (req, res) => {
   let lib;
   try {
-    lib = this.prepareJSLib(req, res, "jsReact");
+    lib = await this.prepareJSLib(req, res, "jsReact");
   } catch (error) {
     console.log("error", error);
   }

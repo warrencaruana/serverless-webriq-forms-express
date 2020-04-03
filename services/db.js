@@ -91,7 +91,7 @@ const forms = {
         "id",
         "_id",
         "timestamp",
-        "_timestamp",
+        "timestamp",
         "type",
         "_type",
         "createdAt",
@@ -121,7 +121,7 @@ const forms = {
       TableName: WEBRIQ_FORMS_TABLE,
       Key: {
         _type: "FORM",
-        _timestamp: data._timestamp,
+        timestamp: data.timestamp,
       },
       ConditionExpression: "#id = :id",
       UpdateExpression: "SET " + UpdateExpressionList.join(","),
@@ -147,7 +147,7 @@ const forms = {
       TableName: WEBRIQ_FORMS_TABLE,
       Key: {
         _type: "FORM",
-        _timestamp: data._timestamp,
+        timestamp: data.timestamp,
       },
     };
 
@@ -235,7 +235,7 @@ const submissions = {
       TableName: WEBRIQ_FORMS_TABLE,
       Key: {
         _type: "SUBMISSION",
-        _timestamp: data._timestamp,
+        timestamp: data.timestamp,
       },
       ConditionExpression: "#id = :id AND #form = :form",
       ExpressionAttributeNames: {
@@ -265,7 +265,7 @@ const submissions = {
           DeleteRequest: {
             Key: {
               _type: submission._type,
-              _timestamp: submission._timestamp,
+              timestamp: submission.timestamp,
             },
           },
         };
@@ -359,7 +359,7 @@ const nonces = {
       TableName: WEBRIQ_FORMS_TABLE,
       Key: {
         _type: "NONCE",
-        _timestamp: data._timestamp,
+        timestamp: data.timestamp,
       },
       ConditionExpression: "#id = :id",
       ExpressionAttributeNames: {

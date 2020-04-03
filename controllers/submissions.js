@@ -58,6 +58,7 @@ exports.postFormSubmissions = async (req, res) => {
   }
 
   const createSubmission = (data) => {
+    console.log("data in createSubmission", data);
     return new Promise(async (resolve, reject) => {
       try {
         await submissions.create(data);
@@ -101,7 +102,6 @@ exports.postFormSubmissions = async (req, res) => {
       return new Promise((resolve, reject) => {
         if (upload.size > fileSizeLimit) {
           reject("Skipping file upload due to size!");
-          resolve("File attachment upload skipped!");
         }
 
         const file = fileTransport
@@ -124,36 +124,39 @@ exports.postFormSubmissions = async (req, res) => {
       doUpload(upload)
     );
 
-    try {
-      return await Promise.all(uploads).then((allUploads) => {
-        allUploads.forEach((upload) => {
-          data["payload"][`${upload.fieldName}`] = upload && upload.url;
-          data.attachments.push(upload);
+    return new Promise(async (resolve, reject) => {
+      try {
+        return await Promise.all(uploads).then((allUploads) => {
+          allUploads.forEach((upload) => {
+            data["payload"][`${upload.fieldName}`] = upload && upload.url;
+            data.attachments.push(upload);
+          });
+
+          console.log("[OK] Uploads successful");
+
+          // @todo: update dynamodb here
+
+          console.log("Data after upload", data);
+          resolve(data);
         });
+      } catch (err) {
+        console.log(
+          "[ERROR] Something went wrong processing uploads",
+          err && err.message
+        );
 
-        console.log("[OK] Uploads successful");
-
-        // @todo: update dynamodb here
-
-        console.log("data", data);
-        return data;
-      });
-    } catch (err) {
-      console.log(
-        "[ERROR] Something went wrong processing uploads",
-        err && err.message
-      );
-
-      return data;
-    }
+        reject(err);
+      }
+    });
   };
 
   const sendEmails = (data) => {
     console.log("[OK] Start sending emails!");
     const emailTos = get(form, "notifications.email.to", []);
-    console.log("emailTos", emailTos);
 
-    emailTos.map((email) => console.log(email));
+    if (!emailTos || emailTos.length === 0) {
+      console.log("[OK] Nothing to send, emailTos is empty...");
+    }
 
     const sendEmail = (emailTo) => {
       return new Promise((resolve, reject) => {
@@ -205,8 +208,7 @@ exports.postFormSubmissions = async (req, res) => {
       });
     };
 
-    return Promise.all(emailTos.map(sendEmail)).then((all) => {
-      console.log("all", all);
+    return Promise.all((emailTos || []).map(sendEmail)).then((all) => {
       console.log("data", data);
       return data;
     });

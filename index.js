@@ -88,6 +88,7 @@ app.delete(
  * Nonces
  */
 app.get("/formnonces", nonce.getNonces);
+app.post("/formnonces", nonce.createNonce);
 app.delete(
   "/formnonces/:id",
   submissionMiddleware.checkNonceIsValid,

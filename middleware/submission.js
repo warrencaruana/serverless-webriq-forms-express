@@ -74,7 +74,16 @@ exports.checkNonceIsValid = async (req, res, next) => {
   }
 
   const form = req.formById;
-  if (form && !form.siteUrls.includes(removeSiteProtocols(origin || referer))) {
+  console.log("[LOG] siteUrls: " + removeSiteProtocols(form.siteUrls));
+  console.log(
+    "[LOG] referer || origin: " + removeSiteProtocols(origin || referer)
+  );
+  if (
+    form &&
+    !removeSiteProtocols(form.siteUrls).includes(
+      removeSiteProtocols(origin || referer)
+    )
+  ) {
     return res.status(403).json({
       message:
         "Unauthorized to perform form submission because host/origin is not allowed for this resource!",
