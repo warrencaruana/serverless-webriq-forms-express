@@ -297,7 +297,7 @@ table.nl-container(style='border-collapse: collapse;table-layout: fixed;border-s
                                                 table(width='100%' cellpadding='0' cellspacing='0' border='0')
                                                     tr(style='line-height:0px;line-height:0px;')
                                                         td(style='padding-right: 0px; padding-left: 0px;' align='center')
-                                            img.center.fixedwidth(align='center' border='0' src='http://webriqservices.img-us10.com/public//2758f4b9ffc37bb1d294fb8ea0a38de8.png?r=1006975302' alt='Image' title='Image' style='outline: none;text-decoration: none;-ms-interpolation-mode: bicubic;clear: both;display: block !important;border: 0;height: auto;float: none;width: 100%;max-width: 100px' width='100')
+                                            img.center.fixedwidth(align='center' border='0' src='https://res.cloudinary.com/dnla85pdq/image/upload/v1569561258/webriq/webriq-cms-logo.png' alt='WebriQ Logo' title='WebriQ Logo' style='outline: none;text-decoration: none;-ms-interpolation-mode: bicubic;clear: both;display: block !important;border: 0;height: auto;float: none;width: 100%;')
                                             //if mso
                                         // [if (!mso)&(!IE)] <!
                                     // <![endif]
@@ -321,8 +321,8 @@ table.nl-container(style='border-collapse: collapse;table-layout: fixed;border-s
                                                             span(style='font-size: 16px; line-height: 24px; color: rgb(0, 0, 0);') WebriQ Forms
                                                     p(style='margin: 0;font-size: 14px;line-height: 21px;text-align: left')
                                                         span(style='font-size: 16px; line-height: 24px; color: rgb(0, 0, 0);')
-                                                            span(style='color: rgb(128, 128, 128); font-size: 16px; line-height: 24px;') Created at
-                                                            |  TODO DATE (UTC)
+                                                            span(style='color: rgb(128, 128, 128); font-size: 16px; line-height: 24px;') Created 
+                                                            |  #{new Date(data.createdAt).toUTCString()}
                                             //if mso
                                         // [if (!mso)&(!IE)] <!
                                     // <![endif]
