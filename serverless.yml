@@ -1,8 +1,8 @@
 org: dorelljames
-service: webriqforms-test2-serverless
+service: webriqforms-test2-withNonce-serverless
 
 custom:
-  WebriQ_Forms_TableName: "webriqforms-test2-table-${self:provider.stage}"
+  WebriQ_Forms_TableName: "webriqforms-test2-withNonce-table-${self:provider.stage}"
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:

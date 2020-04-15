@@ -64,7 +64,7 @@ app.post(
   "/forms/:formId/submissions",
   [
     submissionMiddleware.checkFormIdIsValid,
-    submissionMiddleware.checkNonceIsValid,
+    // submissionMiddleware.checkNonceIsValid,
     submissionMiddleware.checkSiteReferrerIsValid,
     submissionMiddleware.checkBodyIsNotEmpty,
   ],

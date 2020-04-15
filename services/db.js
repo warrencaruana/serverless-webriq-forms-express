@@ -2,9 +2,6 @@ const uuidValidate = require("uuid-validate");
 const omit = require("lodash.omit");
 const {
   WEBRIQ_FORMS_TABLE,
-  FORMS_TABLE,
-  FORM_SUBMISSIONS_TABLE,
-  FORMNONCES_TABLE,
   IS_OFFLINE,
   dynamoDb,
 } = require("../config/constants");
@@ -303,6 +300,7 @@ const nonces = {
   all() {
     const params = {
       TableName: WEBRIQ_FORMS_TABLE,
+      ConsistentRead: true,
       KeyConditionExpression: "#type = :type",
       ExpressionAttributeNames: {
         "#type": "_type",
@@ -317,9 +315,9 @@ const nonces = {
   },
 
   getByToken(token) {
-    console.log("here");
     const params = {
       TableName: WEBRIQ_FORMS_TABLE,
+      ConsistentRead: true,
       KeyConditionExpression: "#type = :type",
       FilterExpression: "#token = :token",
       ExpressionAttributeNames: {
@@ -372,6 +370,46 @@ const nonces = {
     console.log("params", params);
 
     return dynamoDb.delete(params).promise();
+  },
+
+  createMultiple(data) {
+    console.log("data", data);
+    return new Promise(async (resolve, reject) => {
+      const noncesToCreate = data.map((nonce) => {
+        return {
+          PutRequest: {
+            Item: nonce,
+          },
+        };
+      });
+      console.log("noncesToCreate", noncesToCreate);
+
+      const chunk = (arr, size) =>
+        Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+          arr.slice(i * size, i * size + size)
+        );
+
+      // batchWrite can only process 25 items of 1MB data
+      const noncesCreationOperation = chunk(noncesToCreate, 25).map(
+        (nonces) => {
+          const params = {
+            RequestItems: {
+              [WEBRIQ_FORMS_TABLE]: nonces,
+            },
+          };
+          console.log("params", JSON.stringify(params, null, 2));
+
+          try {
+            return dynamoDb.batchWrite(params).promise();
+          } catch (error) {
+            console.log("error", error);
+            reject(err);
+          }
+        }
+      );
+
+      Promise.all(noncesCreationOperation).then((result) => resolve(result));
+    });
   },
 };
 

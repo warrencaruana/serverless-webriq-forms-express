@@ -70,24 +70,6 @@ exports.postFormSubmissions = async (req, res) => {
     });
   };
 
-  const deleteNonce = (data) => {
-    return new Promise((resolve, reject) => {
-      try {
-        if (!req.nonceById) {
-          reject("Nonce not found!");
-        }
-
-        nonces.delete(req.nonceById._id, req.nonceById);
-
-        console.log("[OK] Nonce is deleted!");
-        resolve(data);
-      } catch (err) {
-        console.log("err", err);
-        reject(err);
-      }
-    });
-  };
-
   const sendCreatedResponse = (data) => {
     console.log("data", data);
     res.status(201).json(sanitizeSubmissions(data));
@@ -279,7 +261,6 @@ exports.postFormSubmissions = async (req, res) => {
 
   return processUploads(data)
     .then(createSubmission)
-    .then(deleteNonce)
     .then(async (data) => {
       console.log("sending notifications!");
       return await Promise.all([sendEmails(data), sendWebhooks(data)])

@@ -181,34 +181,6 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
       );
   }
 
-  console.log(process.env.WEBRIQ_API_URL || "http://localhost:3000");
-
-  const createNonces = formNonces.map(async (formNonce) => {
-    console.log("formNonce", formNonce);
-    let data = constructNonceData({
-      token: formNonce.nonce,
-      _form: formNonce.formId,
-    });
-
-    try {
-      const createNonce = await nonces.create(data);
-      console.log("createNonce", createNonce);
-
-      console.log(`Successfully created nonce: ${formNonce.nonce}`);
-    } catch (error) {
-      console.log(error);
-      return {
-        error: true,
-        message: "Unable to generate nonce for form!",
-        data: [],
-      };
-    }
-  });
-
-  await Promise.all(createNonces).then(() => {
-    console.log("Successfully created nonces!");
-  });
-
   res.render(
     viewFile,
     {
@@ -275,7 +247,7 @@ exports.initLib = async (req, res) => {
   if (!formsData || formsData.length < 1) {
     return {
       error: true,
-      message: `WebriQ Forms: Site is not registered and/or ${referer}' is not present in its 'siteUrls'. When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${process.env.APP_URL}/docs for more info.`,
+      message: `WebriQ Forms: Site is not registered and/or '${referer}' is not present in its 'siteUrls'. When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${process.env.APP_URL}/docs for more info.`,
       data: initialFormData,
     };
   }
@@ -283,71 +255,12 @@ exports.initLib = async (req, res) => {
   let formNonces = [];
   let siteUrls = [];
 
-  // // Create _nonces
-  formsData.forEach(async (form) => {
-    const currentNonce = generateNonce();
-
-    // Push new _nonces and siteUrls
-    try {
-      formNonces.push({
-        formId: form && form._id,
-        nonce: currentNonce,
-      });
-
-      siteUrls.push(form.siteUrls);
-    } catch (err) {
-      console.log("err", err);
-      // unable to push nonce or siteUrls
-      return {
-        error: true,
-        message: "Unable to push nonce or siteUrls!",
-        data: [],
-      };
-    }
-
-    // let data = constructNonceData({
-    //   token: currentNonce,
-    //   _form: form && form._id,
-    // });
-
-    // try {
-    //   const createNonce = await nonces.create(data);
-    //   console.log("createNonce", createNonce);
-
-    //   console.log(`Successfully created nonce: ${currentNonce}`);
-    // } catch (error) {
-    //   console.log(error);
-    //   return {
-    //     error: true,
-    //     message: "Unable to generate nonce for form!",
-    //     data: [],
-    //   };
-    // }
-
-    // const params = {
-    //   TableName: FORMNONCES_TABLE,
-    //   Item: data,
-    // };
-    // dynamoDb.put(params, (error) => {
-    //   if (error) {
-    //     console.log(error);
-    //     return {
-    //       error: true,
-    //       message: "Unable to generate nonce for form!",
-    //       data: [],
-    //     };
-    //   }
-
-    //   console.log(`Successfully created nonce: ${currentNonce}`);
-    // });
-  });
-
   siteUrls = uniq(flatten(siteUrls));
   console.log("siteUrls", siteUrls);
 
   return {
     error: false,
-    message: "Successfully init WebriQ Form requirements",
+    message: "Successfully init WebriQ Forms requirements",
     data: {
       forms: formsData,
       referer,

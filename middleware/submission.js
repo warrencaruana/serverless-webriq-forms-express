@@ -73,23 +73,6 @@ exports.checkNonceIsValid = async (req, res, next) => {
     });
   }
 
-  const form = req.formById;
-  console.log("[LOG] siteUrls: " + removeSiteProtocols(form.siteUrls));
-  console.log(
-    "[LOG] referer || origin: " + removeSiteProtocols(origin || referer)
-  );
-  if (
-    form &&
-    !removeSiteProtocols(form.siteUrls).includes(
-      removeSiteProtocols(origin || referer)
-    )
-  ) {
-    return res.status(403).json({
-      message:
-        "Unauthorized to perform form submission because host/origin is not allowed for this resource!",
-    });
-  }
-
   // Save nonce
   req.nonceById = nonceItem.Items[0];
 
@@ -138,7 +121,24 @@ exports.checkFormIdIsValid = async (req, res, next) => {
 };
 
 exports.checkSiteReferrerIsValid = (req, res, next) => {
-  console.log("req.originalUrl", req.originalUrl);
+  const origin = req.get("origin");
+  const referer = req.get("referer");
+  const form = req.formById;
+  console.log("[LOG] siteUrls: " + removeSiteProtocols(form.siteUrls));
+  console.log(
+    "[LOG] referer || origin: " + removeSiteProtocols(origin || referer)
+  );
+  if (
+    form &&
+    !removeSiteProtocols(form.siteUrls).includes(
+      removeSiteProtocols(origin || referer)
+    )
+  ) {
+    return res.status(403).json({
+      message:
+        "Unauthorized to perform form submission because host/origin is not allowed for this resource!",
+    });
+  }
 
   next();
 };
