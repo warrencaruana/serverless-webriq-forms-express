@@ -3,6 +3,7 @@ service: webriqforms-test2-serverless
 
 custom:
   WebriQ_Forms_TableName: "webriqforms-test2-table-${self:provider.stage}"
+  bucket: webriqforms-test2-serverless-bucket
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:
@@ -10,6 +11,9 @@ custom:
       - ${self:provider.stage}
     start:
       migrate: true
+  s3:
+    port: 8001
+    directory: /tmp
 
 provider:
   name: aws
@@ -27,10 +31,15 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - { "Fn::GetAtt": ["WebriQFormsDynamoDBTable", "Arn"] }
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource: "arn:aws:s3:::${self:custom.bucket}/*"
   environment:
     WEBRIQ_FORMS_TABLE: ${self:custom.WebriQ_Forms_TableName}
     APP_URL: https://forms.webriq.com
     APP_STAGE: ${self:custom.stage}
+    APP_REGION: ${self:custom.region}
     APP_DEFAULT_RECAPTCHA_KEY: 6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8
     APP_DEFAULT_RECAPTCHA_SECRET: 6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4
     CLOUDINARY_CLOUD_NAME: dokfyxs4e
@@ -53,6 +62,10 @@ provider:
             ],
           ],
       }
+    BUCKET: ${self:custom.bucket}
+  apiGateway:
+    binaryMediaTypes:
+      - "*/*"
 
 functions:
   app:
@@ -73,6 +86,8 @@ functions:
     handler: index.handler
     events:
       - http: "POST /forms/{proxy}/submissions"
+    environment:
+      BUCKET: ${self:custom.bucket}
   deleteFormSubmission:
     handler: index.handler
     events:
@@ -115,6 +130,7 @@ functions:
 
 plugins:
   - serverless-offline
+  - serverless-s3-local
   - serverless-dynamodb-local
 
 resources:
@@ -137,3 +153,19 @@ resources:
         TimeToLiveSpecification:
           AttributeName: expiresAt
           Enabled: true
+    NewResource:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucket}
+        AccessControl: PublicRead
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - HEAD
+              AllowedOrigins:
+                - "*"
+              AllowedHeaders:
+                - "*"

@@ -2,17 +2,24 @@ const serverless = require("serverless-http");
 const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
-const formData = require("express-form-data");
-const os = require("os");
 const cors = require("cors");
+const multer = require("multer");
+const multerS3 = require("multer-s3");
 
-const options = {
-  uploadDir: os.tmpdir(),
-  autoClean: true,
-};
+const { BUCKET, IS_OFFLINE, s3 } = require("./config/constants");
 
-app.use(formData.parse(options));
-app.use(formData.format());
+const upload = multer({
+  storage: multerS3({
+    s3,
+    bucket: BUCKET,
+    acl: "public-read",
+    contentType: multerS3.AUTO_CONTENT_TYPE,
+    key: function (req, file, cb) {
+      cb(null, Date.now().toString() + "--" + file.originalname);
+    },
+  }),
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
@@ -63,6 +70,7 @@ app.get(
 app.post(
   "/forms/:formId/submissions",
   [
+    upload.any(),
     submissionMiddleware.checkFormIdIsValid,
     // submissionMiddleware.checkNonceIsValid,
     submissionMiddleware.checkSiteReferrerIsValid,

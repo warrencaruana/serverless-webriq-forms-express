@@ -78,58 +78,19 @@ exports.postFormSubmissions = async (req, res) => {
   };
 
   const processUploads = async (data) => {
-    const fileSizeLimit = bytes((form && form.uploadSize) || 0);
-
-    const doUpload = (upload) => {
-      return new Promise((resolve, reject) => {
-        if (upload.size > fileSizeLimit) {
-          reject("Skipping file upload due to size!");
-        }
-
-        const file = fileTransport
-          .upload(upload.path)
-          .then((fileupload) => {
-            attachData = {
-              fieldName: upload.fieldName,
-              file_type: upload.type,
-              public_id: fileupload.public_id,
-              url: fileupload.secure_url,
-            };
-
-            resolve(attachData);
-          })
-          .catch(reject);
-      });
-    };
-
-    const uploads = Object.entries(files).map(([index, upload]) =>
-      doUpload(upload)
-    );
-
-    return new Promise(async (resolve, reject) => {
-      try {
-        return await Promise.all(uploads).then((allUploads) => {
-          allUploads.forEach((upload) => {
-            data["payload"][`${upload.fieldName}`] = upload && upload.url;
-            data.attachments.push(upload);
-          });
-
-          console.log("[OK] Uploads successful");
-
-          // @todo: update dynamodb here
-
-          console.log("Data after upload", data);
-          resolve(data);
+    if (files && files.length > 0) {
+      req.files.forEach((upload) => {
+        data["payload"][upload.fieldname] = upload && upload.location;
+        data.attachments.push({
+          original_filename: upload.originalname,
+          public_id: upload.key,
+          file_type: upload.mimetype,
+          url: upload.location,
         });
-      } catch (err) {
-        console.log(
-          "[ERROR] Something went wrong processing uploads",
-          err && err.message
-        );
+      });
+    }
 
-        reject(err);
-      }
-    });
+    return data;
   };
 
   const sendEmails = (data) => {

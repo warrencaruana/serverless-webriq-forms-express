@@ -59,7 +59,7 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
 
   if (Object.entries(attachments).length > 0) {
     Object.entries(attachments).forEach(([index, upload]) => {
-      formData[`${upload.fieldName}`] = `Processing attachment...`;
+      formData[`${upload.fieldname}`] = `Processing attachment...`;
     });
   }
 
