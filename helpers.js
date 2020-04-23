@@ -9,7 +9,7 @@ const constructFormData = (data) => {
   return {
     _id,
     _type: "FORM",
-    timestamp: get(data, "timestamp", Math.round(now / 1000)),
+    timestamp: get(data, "timestamp", now.getTime()),
     name: get(data, "name", "WebriQ Form"),
     siteUrls: get(data, "siteUrls", []),
     testUrls: get(data, "testUrls", []),
@@ -71,7 +71,7 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
     {
       _id,
       _type: "SUBMISSION",
-      timestamp: Math.round(now / 1000),
+      timestamp: now.getTime(),
       _form: formId,
       payload: formData,
       attachments: [],
@@ -95,7 +95,7 @@ const constructNonceData = (data) => {
   return {
     _id,
     _type: "NONCE",
-    timestamp: get(data, "timestamp", Math.round(now / 1000)),
+    timestamp: get(data, "timestamp", now.getTime()),
     expiresAt: Math.round(tomorrowDate / 1000),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),

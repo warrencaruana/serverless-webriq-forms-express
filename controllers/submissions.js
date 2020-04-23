@@ -168,7 +168,7 @@ exports.postFormSubmissions = async (req, res) => {
 
       function handleWebhookError(error) {
         if (error.response) {
-          console.log("[ERR] Slack webhook not sent!");
+          console.log("[ERR] Webhook not sent!");
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
           console.log(error.response.data);
