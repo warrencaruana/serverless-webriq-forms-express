@@ -3,6 +3,7 @@ service: webriqforms-test2-serverless
 
 custom:
   WebriQ_Forms_TableName: "webriqforms-test2-table-${self:provider.stage}"
+  WebriQ_Forms_UserTableName: "webriqforms-test2-users-table-${self:provider.stage}"
   bucket: webriqforms-test2-serverless-bucket
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
@@ -40,6 +41,7 @@ provider:
       Resource: "arn:aws:s3:::${self:custom.bucket}/*"
   environment:
     WEBRIQ_FORMS_TABLE: ${self:custom.WebriQ_Forms_TableName}
+    WEBRIQ_FORMS_USERS_TABLE: ${self:custom.WebriQ_Forms_UserTableName}
     APP_URL: https://forms.webriq.com
     APP_STAGE: ${self:custom.stage}
     APP_REGION: ${self:custom.region}
@@ -77,6 +79,16 @@ functions:
     events:
       - http: ANY /
       - http: "ANY {proxy+}"
+
+  jwtTokenTest:
+    handler: index.handler
+    events:
+      - http: "GET /tokentest"
+
+  postLogin:
+    handler: index.handler
+    events:
+      - http: "POST /login"
 
   getFormSubmissions:
     handler: index.handler
@@ -157,7 +169,18 @@ resources:
         TimeToLiveSpecification:
           AttributeName: expiresAt
           Enabled: true
-    NewResource:
+    WebriQFormsUsersDynamoDBTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: ${self:custom.WebriQ_Forms_UserTableName}
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+    WebriQFormsUsersS3Bucket:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:custom.bucket}

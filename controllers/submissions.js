@@ -1,16 +1,14 @@
-const bytes = require("bytes");
 const get = require("lodash.get");
 const axios = require("axios");
 const validator = require("validator");
 
-const { FORM_SUBMISSIONS_TABLE, dynamoDb } = require("../config/constants");
-const { fileTransport, mailer } = require("../services");
+const { mailer } = require("../services");
 const {
   constructFormSubmissionData,
   sanitizeSubmissions,
 } = require("../helpers");
 
-const { submissions, nonces } = require("../services/db");
+const { submissions } = require("../services/db");
 
 /**
  * GET /forms/:id/submissions

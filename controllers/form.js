@@ -1,23 +1,13 @@
 const flatten = require("lodash.flatten");
 const uniq = require("lodash.uniq");
-const uuid = require("uuid/v4");
-const get = require("lodash.get");
 const uuidValidate = require("uuid-validate");
 const JavaScriptObfuscator = require("javascript-obfuscator");
 
-const {
-  FORMNONCES_TABLE,
-  dynamoDb,
-  IS_OFFLINE,
-} = require("../config/constants");
+const { IS_OFFLINE } = require("../config/constants");
 
-const { forms, nonces } = require("../services/db");
+const { forms } = require("../services/db");
 
-const {
-  constructFormData,
-  constructNonceData,
-  sanitizeForms,
-} = require("../helpers");
+const { constructFormData, sanitizeForms } = require("../helpers");
 
 const initialFormData = {
   referer: null,

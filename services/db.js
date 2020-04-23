@@ -2,7 +2,7 @@ const uuidValidate = require("uuid-validate");
 const omit = require("lodash.omit");
 const {
   WEBRIQ_FORMS_TABLE,
-  IS_OFFLINE,
+  WEBRIQ_FORMS_USERS_TABLE,
   dynamoDb,
 } = require("../config/constants");
 
@@ -413,8 +413,47 @@ const nonces = {
   },
 };
 
+const users = {
+  getByEmail(email) {
+    console.log("email", email);
+    const params = {
+      TableName: WEBRIQ_FORMS_USERS_TABLE,
+      KeyConditionExpression: "#email = :email",
+      ExpressionAttributeNames: {
+        "#email": "email",
+      },
+      ExpressionAttributeValues: {
+        ":email": email,
+      },
+      ScanIndexForward: false,
+    };
+
+    return dynamoDb.query(params).promise();
+  },
+
+  create(data) {
+    const params = {
+      TableName: WEBRIQ_FORMS_USERS_TABLE,
+      Item: data,
+    };
+    console.log("params", params);
+
+    return new Promise((resolve, reject) => {
+      dynamoDb.put(params, (error, result) => {
+        if (error) {
+          console.log(error);
+          reject(error);
+        }
+
+        resolve(data);
+      });
+    });
+  },
+};
+
 module.exports = {
   forms,
   submissions,
   nonces,
+  users,
 };

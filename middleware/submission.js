@@ -1,13 +1,3 @@
-const AWS = require("aws-sdk");
-
-const {
-  FORMS_TABLE,
-  FORM_SUBMISSIONS_TABLE,
-  FORMNONCES_TABLE,
-  IS_OFFLINE,
-  dynamoDb,
-} = require("../config/constants");
-
 const { forms, submissions, nonces } = require("../services/db");
 const { removeSiteProtocols } = require("../helpers");
 
