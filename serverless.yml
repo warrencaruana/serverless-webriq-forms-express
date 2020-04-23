@@ -1,10 +1,10 @@
 org: dorelljames
-service: webriqforms-test2-serverless
+service: webriqforms-dev-serverless
 
 custom:
-  WebriQ_Forms_TableName: "webriqforms-test2-table-${self:provider.stage}"
-  WebriQ_Forms_UserTableName: "webriqforms-test2-users-table-${self:provider.stage}"
-  bucket: webriqforms-test2-serverless-bucket
+  WebriQ_Forms_TableName: "webriqforms-dev-table-${self:provider.stage}"
+  WebriQ_Forms_UserTableName: "webriqforms-dev-users-table-${self:provider.stage}"
+  bucket: webriqforms-dev-serverless-bucket
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:
@@ -35,6 +35,7 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - { "Fn::GetAtt": ["WebriQFormsDynamoDBTable", "Arn"] }
+        - { "Fn::GetAtt": ["WebriQFormsUsersDynamoDBTable", "Arn"] }
     - Effect: Allow
       Action:
         - s3:*
@@ -180,7 +181,7 @@ resources:
           - AttributeName: email
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
-    WebriQFormsUsersS3Bucket:
+    WebriQFormsS3Bucket:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:custom.bucket}
@@ -189,8 +190,6 @@ resources:
           CorsRules:
             - AllowedMethods:
                 - GET
-                - PUT
-                - POST
                 - HEAD
               AllowedOrigins:
                 - "*"
