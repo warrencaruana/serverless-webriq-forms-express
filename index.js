@@ -1,8 +1,8 @@
-const serverless = require("serverless-http");
+const awsServerlessExpress = require("aws-serverless-express");
 const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
-const cors = require("cors");
+const server = awsServerlessExpress.createServer(app);
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 
@@ -22,7 +22,6 @@ const upload = multer({
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cors());
 app.set("view engine", "pug");
 
 // Load middlewares
@@ -34,7 +33,6 @@ const jwtMiddleware = require("./middleware/jwt");
 const form = require("./controllers/form");
 const submission = require("./controllers/submissions");
 const user = require("./controllers/user");
-const nonce = require("./controllers/nonces");
 
 /**
  * GET /
@@ -108,17 +106,6 @@ app.delete(
 );
 
 /**
- * Nonces
- */
-// app.get("/formnonces", nonce.getNonces);
-// app.post("/formnonces", nonce.createNonce);
-// app.delete(
-//   "/formnonces/:id",
-//   submissionMiddleware.checkNonceIsValid,
-//   nonce.deleteNonce
-// );
-
-/**
  * Authenticate via JWT
  */
 app.get("/tokentest", jwtMiddleware.verifyToken, (req, res) => {
@@ -136,4 +123,7 @@ app.get("/logout", user.logout);
 app.get("/js/initForms", form.getJSLib);
 app.get("/js/initReactForms", form.getReactJSLib);
 
-module.exports.handler = serverless(app);
+// module.exports.handler = serverless(app);
+exports.handler = (event, context) => {
+  awsServerlessExpress.proxy(server, event, context);
+};

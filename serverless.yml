@@ -1,10 +1,11 @@
-org: dorelljames
-service: webriqforms-dev-serverless
+org: webriq
+service: webriqforms-v2
+app: webriqforms-v2
 
 custom:
-  WebriQ_Forms_TableName: "webriqforms-dev-table-${self:provider.stage}"
-  WebriQ_Forms_UserTableName: "webriqforms-dev-users-table-${self:provider.stage}"
-  bucket: webriqforms-dev-serverless-bucket
+  WebriQ_Forms_TableName: "webriqforms-v2-primary-table-${self:provider.stage}"
+  WebriQ_Forms_UserTableName: "webriqforms-v2-users-table-${self:provider.stage}"
+  WebriQ_Forms_Bucket: "webriqforms-v2-${self:provider.stage}-bucket"
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:
@@ -16,13 +17,13 @@ custom:
     port: 8001
     directory: /tmp
   logRetentionInDays:
-    prod: 90
+    production: 90
     dev: 30
 
 provider:
   name: aws
   runtime: nodejs12.x
-  stage: dev
+  stage: ${opt:stage, 'dev'}
   region: us-west-2
   iamRoleStatements:
     - Effect: Allow
@@ -39,23 +40,20 @@ provider:
     - Effect: Allow
       Action:
         - s3:*
-      Resource: "arn:aws:s3:::${self:custom.bucket}/*"
+      Resource: "arn:aws:s3:::${self:custom.WebriQ_Forms_Bucket}/*"
   environment:
     WEBRIQ_FORMS_TABLE: ${self:custom.WebriQ_Forms_TableName}
     WEBRIQ_FORMS_USERS_TABLE: ${self:custom.WebriQ_Forms_UserTableName}
-    APP_URL: https://forms.webriq.com
+    BUCKET: ${self:custom.WebriQ_Forms_Bucket}
+    APP_URL: ${param:APP_URL, "https://forms.webriq.com"}
     APP_STAGE: ${self:custom.stage}
     APP_REGION: ${self:custom.region}
-    APP_DEFAULT_RECAPTCHA_KEY: 6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8
-    APP_DEFAULT_RECAPTCHA_SECRET: 6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4
-    CLOUDINARY_CLOUD_NAME: dokfyxs4e
-    CLOUDINARY_API_KEY: 151834162875131
-    CLOUDINARY_API_SECRET: 3cxSNFjBmJRNjOrOVBweYgx-ZgQ
-    MAILGUN_USER: postmaster@webriqshops.com
-    MAILGUN_PASSWORD: 0c7389efd226e9bee418cc83e73b0bfe
-    MAILTRAP_USER: 44314661af65a2928
-    MAILTRAP_PASSWORD: 093bfd51adeb42
-    WEBRIQ_FORMS_API_URL_DEV: http://localhost:3000/forms/
+    APP_DEFAULT_RECAPTCHA_KEY: ${param:APP_DEFAULT_RECAPTCHA_KEY, "6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8"}
+    APP_DEFAULT_RECAPTCHA_SECRET: ${param:APP_DEFAULT_RECAPTCHA_SECRET, "6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4"}
+    MAILGUN_USER: ${param:MAILGUN_USER, "postmaster@webriqshops.com"}
+    MAILGUN_PASSWORD: ${param:MAILGUN_PASSWORD, "0c7389efd226e9bee418cc83e73b0bfe"}
+    MAILTRAP_USER: ${param:MAILTRAP_USER, "44314661af65a2928"}
+    MAILTRAP_PASSWORD: ${param:MAILTRAP_PASSWORD, "093bfd51adeb42"}
     WEBRIQ_FORMS_API_URL:
       {
         "Fn::Join":
@@ -68,7 +66,6 @@ provider:
             ],
           ],
       }
-    BUCKET: ${self:custom.bucket}
   logRetentionInDays: ${self:custom.logRetentionInDays.${self:custom.stage}}
   apiGateway:
     binaryMediaTypes:
@@ -78,8 +75,14 @@ functions:
   app:
     handler: index.handler
     events:
-      - http: ANY /
-      - http: "ANY {proxy+}"
+      - http:
+          method: ANY
+          path: /
+          cors: true
+      - http:
+          method: ANY
+          path: "{proxy+}"
+          cors: true
 
   jwtTokenTest:
     handler: index.handler
@@ -104,7 +107,7 @@ functions:
     events:
       - http: "POST /forms/{proxy}/submissions"
     environment:
-      BUCKET: ${self:custom.bucket}
+      BUCKET: ${self:custom.WebriQ_Forms_Bucket}
   deleteFormSubmission:
     handler: index.handler
     events:
@@ -139,11 +142,17 @@ functions:
   getJSLib:
     handler: index.handler
     events:
-      - http: "GET /js/initForms"
+      - http:
+          method: GET
+          path: "/js/initForms"
+          cors: true
   getReactJSLib:
     handler: index.handler
     events:
-      - http: "GET /js/initReactForms"
+      - http:
+          method: GET
+          path: "/js/initReactForms"
+          cors: true
 
 plugins:
   - serverless-offline
@@ -184,7 +193,7 @@ resources:
     WebriQFormsS3Bucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${self:custom.bucket}
+        BucketName: ${self:custom.WebriQ_Forms_Bucket}
         AccessControl: PublicRead
         CorsConfiguration:
           CorsRules:
