@@ -24,10 +24,10 @@ exports.getForms = async (req, res) => {
     const result = await forms.all();
 
     if (result && result.Items) {
-      return res.json(sanitizeForms(result.Items));
+      return res.status(200).json(sanitizeForms(result.Items));
     }
 
-    return res.json([]);
+    return res.status(200).json([]);
   } catch (error) {
     console.log("error", error);
     return res
