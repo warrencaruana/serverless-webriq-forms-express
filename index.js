@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
 const server = awsServerlessExpress.createServer(app);
+const cors = require("cors");
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 
@@ -46,7 +47,7 @@ app.get("/", (req, res) => {
  */
 app.get("/forms", jwtMiddleware.verifyToken, form.getForms);
 app.get("/forms/:id", form.getFormsByIdOrURL);
-app.get("/forms/:url/url", form.getFormsByURL);
+app.get("/forms/:url/url", cors(), form.getFormsByURL);
 app.post(
   "/forms",
   [jwtMiddleware.verifyToken, formMiddleware.sanitizeFormData],
@@ -83,6 +84,7 @@ app.get(
 app.post(
   "/forms/:formId/submissions",
   [
+    cors(),
     upload.any(),
     submissionMiddleware.checkFormIdIsValid,
     // submissionMiddleware.checkNonceIsValid,

@@ -124,7 +124,10 @@ functions:
   getFormByURL:
     handler: index.handler
     events:
-      - http: "GET /forms/{proxy}/url"
+      - http:
+          method: GET
+          path: "/forms/{proxy}/url"
+          cors: true
   getForm:
     handler: index.handler
     events:

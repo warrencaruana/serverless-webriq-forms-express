@@ -198,8 +198,8 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
         unicodeEscapeSequence: true,
       });
 
-      // res.type("js").send(jsFile.getObfuscatedCode());
-      res.type("js").send(jsOutput);
+      res.type("js").send(jsFile.getObfuscatedCode());
+      // res.type("js").send(jsOutput);
     }
   );
 };
