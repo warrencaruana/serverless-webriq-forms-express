@@ -34,6 +34,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
+        - dynamodb:BatchWriteItem
       Resource:
         - { "Fn::GetAtt": ["WebriQFormsDynamoDBTable", "Arn"] }
         - { "Fn::GetAtt": ["WebriQFormsUsersDynamoDBTable", "Arn"] }
@@ -108,6 +109,10 @@ functions:
       - http: "POST /forms/{proxy}/submissions"
     environment:
       BUCKET: ${self:custom.WebriQ_Forms_Bucket}
+  deleteFormSubmissions:
+    handler: index.handler
+    events:
+      - http: "DELETE /forms/{proxy}/submissions"
   deleteFormSubmission:
     handler: index.handler
     events:
