@@ -106,7 +106,10 @@ functions:
   createFormSubmission:
     handler: index.handler
     events:
-      - http: "POST /forms/{proxy}/submissions"
+      - http:
+          method: POST
+          path: "/forms/{proxy}/submissions"
+          cors: true
     environment:
       BUCKET: ${self:custom.WebriQ_Forms_Bucket}
   deleteFormSubmissions:

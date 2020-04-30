@@ -182,7 +182,8 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
     },
     (err, js) => {
       if (err) {
-        throw err;
+        console.log("error preparing js", err);
+        return res.type(".js").send(`console.error("${err}");`);
       }
 
       const jsOutput = js.replace("<script>", "").replace("</script>", "");
@@ -198,8 +199,8 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
         unicodeEscapeSequence: true,
       });
 
-      res.type("js").send(jsFile.getObfuscatedCode());
-      // res.type("js").send(jsOutput);
+      // res.type("js").send(jsFile.getObfuscatedCode());
+      res.type("js").send(jsOutput);
     }
   );
 };

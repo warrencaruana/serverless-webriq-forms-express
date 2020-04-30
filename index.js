@@ -23,6 +23,7 @@ const upload = multer({
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cors());
 app.set("view engine", "pug");
 
 // Load middlewares
@@ -47,7 +48,7 @@ app.get("/", (req, res) => {
  */
 app.get("/forms", jwtMiddleware.verifyToken, form.getForms);
 app.get("/forms/:id", form.getFormsByIdOrURL);
-app.get("/forms/:url/url", cors(), form.getFormsByURL);
+app.get("/forms/:url/url", form.getFormsByURL);
 app.post(
   "/forms",
   [jwtMiddleware.verifyToken, formMiddleware.sanitizeFormData],
@@ -84,7 +85,6 @@ app.get(
 app.post(
   "/forms/:formId/submissions",
   [
-    cors(),
     upload.any(),
     submissionMiddleware.checkFormIdIsValid,
     // submissionMiddleware.checkNonceIsValid,
