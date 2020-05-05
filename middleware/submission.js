@@ -114,7 +114,7 @@ exports.checkSiteReferrerIsValid = (req, res, next) => {
   const origin = req.get("origin");
   const referer = req.get("referer");
   const form = req.formById;
-  console.log("[LOG] siteUrls: " + removeSiteProtocols(form.siteUrls));
+  console.log("[LOG] siteUrls: " + removeSiteProtocols(form && form.siteUrls));
   console.log(
     "[LOG] referer || origin: " + removeSiteProtocols(origin || referer)
   );

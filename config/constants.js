@@ -18,6 +18,7 @@ if (IS_OFFLINE === "true") {
   dynamoDb = new AWS.DynamoDB.DocumentClient({
     region: "localhost",
     endpoint: "http://localhost:8000",
+    convertEmptyValues: true,
   });
   s3 = new AWS.S3({
     s3ForcePathStyle: true,
@@ -26,7 +27,7 @@ if (IS_OFFLINE === "true") {
     endpoint: new AWS.Endpoint("http://localhost:8001"),
   });
 } else {
-  dynamoDb = new AWS.DynamoDB.DocumentClient();
+  dynamoDb = new AWS.DynamoDB.DocumentClient({ convertEmptyValues: true });
   s3 = new AWS.S3();
 }
 
