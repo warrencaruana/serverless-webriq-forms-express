@@ -1,13 +1,4 @@
-const AWS = require("aws-sdk");
-
-const {
-  FORMS_TABLE,
-  FORM_SUBMISSIONS_TABLE,
-  FORMNONCES_TABLE,
-  IS_OFFLINE,
-  dynamoDb
-} = require("../config/constants");
-
+const { forms, submissions, nonces } = require("../services/db");
 const { removeSiteProtocols } = require("../helpers");
 
 exports.checkBodyIsNotEmpty = async (req, res, next) => {
@@ -16,9 +7,9 @@ exports.checkBodyIsNotEmpty = async (req, res, next) => {
       message: "Validation Failed",
       errors: [
         {
-          msg: "Form body must not be empty"
-        }
-      ]
+          msg: "Form body must not be empty",
+        },
+      ],
     });
   }
 
@@ -33,72 +24,111 @@ exports.checkNonceIsValid = async (req, res, next) => {
 
   if (!_nonce) {
     return res.status(400).json({
-      message: "Invalid form submission request. Security feature not met!"
+      message: "Invalid form submission request. Security feature not met!",
     });
   }
 
-  const nonceItem = await dynamoDb
-    .get({
-      TableName: FORMNONCES_TABLE,
-      Key: {
-        token: _nonce
-      }
-    })
-    .promise();
+  let nonceItem = null;
 
-  if (!nonceItem || !nonceItem.Item) {
+  try {
+    nonceItem = await nonces.getByToken(_nonce);
+  } catch (err) {
+    console.log("err", err);
+    return res.status(500).json({
+      message: "Something went validating security feature!",
+    });
+  }
+  console.log("nonceItem", nonceItem);
+
+  if (
+    !nonceItem ||
+    !nonceItem.Items ||
+    (nonceItem.Items && nonceItem.Items.length !== 1)
+  ) {
     return res.status(403).json({
       message:
-        "Unauthorized to perform form submission because _nonce is invalid or not found!"
+        "Unauthorized to perform form submission because security feature is invalid or not found!",
     });
   }
 
-  const hasNonceExpired = expiryDate => {
-    return new Date().getTime() > expiryDate;
+  const hasNonceExpired = (expiryDate) => {
+    const nowEpochDate = Math.round(new Date() / 1000);
+
+    return nowEpochDate > expiryDate;
   };
 
-  if (hasNonceExpired(nonceItem.Item.expiryDate)) {
+  if (hasNonceExpired(nonceItem.Items[0].expiresAt)) {
     return res.status(400).json({
-      message: "Form nonce has expired. Please try again!"
+      message: "Security feature has expired. Please try again!",
     });
   }
 
-  const form = req.formById;
-  if (form && !form.siteUrls.includes(removeSiteProtocols(origin || referer))) {
-    return res.status(403).json({
-      message:
-        "Unauthorized to perform form submission because host/origin is not allowed for this resource!"
+  // Save nonce
+  req.nonceById = nonceItem.Items[0];
+
+  next();
+};
+
+exports.checkSubmissionIdIsValid = async (req, res, next) => {
+  const submissionById = await submissions.getByFormIdAndId(
+    req.params.formId,
+    req.params.id
+  );
+  // console.log("submissionById", submissionById);
+
+  if (!submissionById || !submissionById.Items) {
+    res.status(404).json({
+      message: "Form resource not found by ID!",
     });
+    return;
   }
+
+  // If found, attach submissionById for use later
+  req.submissionById = submissionById.Items[0];
 
   next();
 };
 
 exports.checkFormIdIsValid = async (req, res, next) => {
-  const formById = await dynamoDb
-    .get({
-      TableName: FORMS_TABLE,
-      Key: {
-        _id: req.params.formId || req.params.id
-      }
-    })
-    .promise();
-
-  if (!formById || !formById.Item) {
-    res.status(404).json({
-      message: "Form resource not found by ID!"
+  // console.log(
+  //   "req.params.formId || req.params.id",
+  //   req.params.formId || req.params.id
+  // );
+  console.log(
+    "Checking form resource ID is valid: " + req.params.formId || req.params.id
+  );
+  const formById = await forms.getById(req.params.formId || req.params.id);
+  if (!formById || !formById.Items || !formById.Items.length > 0) {
+    return res.status(404).json({
+      message: "Form resource not found by ID!",
     });
-    return;
   }
 
   // If found, attach formById for use later
-  req.formById = formById.Item;
+  req.formById = formById.Items[0];
 
   next();
 };
 
 exports.checkSiteReferrerIsValid = (req, res, next) => {
-  console.log("req.originalUrl", req.originalUrl);
+  const origin = req.get("origin");
+  const referer = req.get("referer");
+  const form = req.formById;
+  console.log("[LOG] siteUrls: " + removeSiteProtocols(form && form.siteUrls));
+  console.log(
+    "[LOG] referer || origin: " + removeSiteProtocols(origin || referer)
+  );
+  if (
+    form &&
+    !removeSiteProtocols(form.siteUrls).includes(
+      removeSiteProtocols(origin || referer)
+    )
+  ) {
+    return res.status(403).json({
+      message:
+        "Unauthorized to perform form submission because host/origin is not allowed for this resource!",
+    });
+  }
 
   next();
 };

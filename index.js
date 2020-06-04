@@ -1,18 +1,26 @@
-const serverless = require("serverless-http");
+const awsServerlessExpress = require("aws-serverless-express");
 const bodyParser = require("body-parser");
 const express = require("express");
 const app = express();
-const formData = require("express-form-data");
-const os = require("os");
+const server = awsServerlessExpress.createServer(app);
 const cors = require("cors");
+const multer = require("multer");
+const multerS3 = require("multer-s3");
 
-const options = {
-  uploadDir: os.tmpdir(),
-  autoClean: true
-};
+const { BUCKET, s3 } = require("./config/constants");
 
-app.use(formData.parse(options));
-app.use(formData.format());
+const upload = multer({
+  storage: multerS3({
+    s3,
+    bucket: BUCKET,
+    acl: "public-read",
+    contentType: multerS3.AUTO_CONTENT_TYPE,
+    key: function (req, file, cb) {
+      cb(null, Date.now().toString() + "--" + file.originalname);
+    },
+  }),
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
@@ -21,11 +29,12 @@ app.set("view engine", "pug");
 // Load middlewares
 const formMiddleware = require("./middleware/form");
 const submissionMiddleware = require("./middleware/submission");
+const jwtMiddleware = require("./middleware/jwt");
 
 // Load controllers
 const form = require("./controllers/form");
 const submission = require("./controllers/submissions");
-const nonce = require("./controllers/nonces");
+const user = require("./controllers/user");
 
 /**
  * GET /
@@ -37,50 +46,74 @@ app.get("/", (req, res) => {
 /**
  * Forms
  */
-app.get("/forms", form.getForms);
+app.get("/forms", jwtMiddleware.verifyToken, form.getForms);
 app.get("/forms/:id", form.getFormsByIdOrURL);
 app.get("/forms/:url/url", form.getFormsByURL);
-app.post("/forms", [formMiddleware.sanitizeFormData], form.postForms);
+app.post(
+  "/forms",
+  [jwtMiddleware.verifyToken, formMiddleware.sanitizeFormData],
+  form.postForms
+);
 app.put(
   "/forms/:id",
-  [submissionMiddleware.checkFormIdIsValid, formMiddleware.sanitizeFormData],
+  [jwtMiddleware.verifyToken, submissionMiddleware.checkFormIdIsValid],
   form.putUpdateForms
 );
-app.delete("/forms/:id", form.deleteFormsById);
+app.delete(
+  "/forms/:id",
+  [jwtMiddleware.verifyToken, submissionMiddleware.checkFormIdIsValid],
+  form.deleteFormsById
+);
 
 /**
  * Submissions
  */
-app.get("/forms/:formId/submissions", submission.getFormSubmissions);
+app.get(
+  "/forms/:formId/submissions",
+  jwtMiddleware.verifyToken,
+  submission.getFormSubmissions
+);
 app.get(
   "/forms/:formId/submissions/:id",
+  jwtMiddleware.verifyToken,
   submission.getFormSubmissionsByIdAndFormId
 );
 app.post(
   "/forms/:formId/submissions",
   [
+    upload.any(),
     submissionMiddleware.checkFormIdIsValid,
     // submissionMiddleware.checkNonceIsValid,
     submissionMiddleware.checkSiteReferrerIsValid,
-    submissionMiddleware.checkBodyIsNotEmpty
+    submissionMiddleware.checkBodyIsNotEmpty,
   ],
   submission.postFormSubmissions
 );
 app.delete(
   "/forms/:formId/submissions",
-  [submissionMiddleware.checkFormIdIsValid],
+  [jwtMiddleware.verifyToken, submissionMiddleware.checkFormIdIsValid],
   submission.deleteFormSubmissionsByByFormId
 );
 app.delete(
   "/forms/:formId/submissions/:id",
-  [submissionMiddleware.checkFormIdIsValid],
+  [
+    // submissionMiddleware.checkFormIdIsValid,
+    [jwtMiddleware.verifyToken, submissionMiddleware.checkSubmissionIdIsValid],
+  ],
   submission.deleteFormSubmissionsByIdAndFormId
 );
 
 /**
- * Nonces
+ * Authenticate via JWT
  */
-app.get("/formnonces", nonce.getNonces);
+app.get("/tokentest", jwtMiddleware.verifyToken, (req, res) => {
+  return res.json({
+    message: "ok",
+  });
+});
+app.get("/setup/users/admin", user.setupAdminUser);
+app.post("/login", user.postLogin);
+app.get("/logout", user.logout);
 
 /**
  * JS Library
@@ -88,4 +121,7 @@ app.get("/formnonces", nonce.getNonces);
 app.get("/js/initForms", form.getJSLib);
 app.get("/js/initReactForms", form.getReactJSLib);
 
-module.exports.handler = serverless(app);
+// module.exports.handler = serverless(app);
+exports.handler = (event, context) => {
+  awsServerlessExpress.proxy(server, event, context);
+};

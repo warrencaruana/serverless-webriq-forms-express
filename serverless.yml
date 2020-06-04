@@ -1,10 +1,11 @@
-org: dorelljames
-service: wfv2-serverless
+org: webriq
+service: webriqforms-v2
+app: webriqforms-v2
 
 custom:
-  WF_Forms_TableName: "wfv2-forms-table-${self:provider.stage}"
-  WF_FormSubmissions_TableName: "wfv2-form_submissions-table-${self:provider.stage}"
-  WF_FormNonces_TableName: "wfv2-form_nonces-table-${self:provider.stage}"
+  WebriQ_Forms_TableName: "webriqforms-v2-primary-table-${self:provider.stage}"
+  WebriQ_Forms_UserTableName: "webriqforms-v2-users-table-${self:provider.stage}"
+  WebriQ_Forms_Bucket: "webriqforms-v2-${self:provider.stage}-bucket"
   stage: ${opt:stage, self:provider.stage}
   region: ${opt:region, self:provider.region}
   dynamodb:
@@ -12,12 +13,17 @@ custom:
       - ${self:provider.stage}
     start:
       migrate: true
+  s3:
+    port: 8001
+    directory: /tmp
+  logRetentionInDays:
+    production: 90
+    dev: 30
 
 provider:
   name: aws
   runtime: nodejs12.x
-  memorySize: 256
-  stage: dev
+  stage: ${opt:stage, 'dev'}
   region: us-west-2
   iamRoleStatements:
     - Effect: Allow
@@ -28,26 +34,27 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
+        - dynamodb:BatchWriteItem
       Resource:
-        - { "Fn::GetAtt": ["FormsDynamoDBTable", "Arn"] }
-        - { "Fn::GetAtt": ["SubmissionsDynamoDBTable", "Arn"] }
-        - { "Fn::GetAtt": ["FormNoncesDynamoDBTable", "Arn"] }
+        - { "Fn::GetAtt": ["WebriQFormsDynamoDBTable", "Arn"] }
+        - { "Fn::GetAtt": ["WebriQFormsUsersDynamoDBTable", "Arn"] }
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource: "arn:aws:s3:::${self:custom.WebriQ_Forms_Bucket}/*"
   environment:
-    FORMS_TABLE: ${self:custom.WF_Forms_TableName}
-    FORMNONCES_TABLE: ${self:custom.WF_FormNonces_TableName}
-    FORM_SUBMISSIONS_TABLE: ${self:custom.WF_FormSubmissions_TableName}
-    APP_URL: https://forms.webriq.com
+    WEBRIQ_FORMS_TABLE: ${self:custom.WebriQ_Forms_TableName}
+    WEBRIQ_FORMS_USERS_TABLE: ${self:custom.WebriQ_Forms_UserTableName}
+    BUCKET: ${self:custom.WebriQ_Forms_Bucket}
+    APP_URL: ${param:APP_URL, "https://forms.webriq.com"}
     APP_STAGE: ${self:custom.stage}
-    APP_DEFAULT_RECAPTCHA_KEY: 6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8
-    APP_DEFAULT_RECAPTCHA_SECRET: 6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4
-    CLOUDINARY_CLOUD_NAME: dokfyxs4e
-    CLOUDINARY_API_KEY: 151834162875131
-    CLOUDINARY_API_SECRET: 3cxSNFjBmJRNjOrOVBweYgx-ZgQ
-    MAILGUN_USER: postmaster@webriqshops.com
-    MAILGUN_PASSWORD: 0c7389efd226e9bee418cc83e73b0bfe
-    MAILTRAP_USER: 44314661af65a2928
-    MAILTRAP_PASSWORD: 093bfd51adeb42
-    WEBRIQ_FORMS_API_URL_DEV: http://localhost:3000/forms/
+    APP_REGION: ${self:custom.region}
+    APP_DEFAULT_RECAPTCHA_KEY: ${param:APP_DEFAULT_RECAPTCHA_KEY, "6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8"}
+    APP_DEFAULT_RECAPTCHA_SECRET: ${param:APP_DEFAULT_RECAPTCHA_SECRET, "6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4"}
+    MAILGUN_USER: ${param:MAILGUN_USER, "postmaster@webriqshops.com"}
+    MAILGUN_PASSWORD: ${param:MAILGUN_PASSWORD, "0c7389efd226e9bee418cc83e73b0bfe"}
+    MAILTRAP_USER: ${param:MAILTRAP_USER, "44314661af65a2928"}
+    MAILTRAP_PASSWORD: ${param:MAILTRAP_PASSWORD, "093bfd51adeb42"}
     WEBRIQ_FORMS_API_URL:
       {
         "Fn::Join":
@@ -60,13 +67,59 @@ provider:
             ],
           ],
       }
+  logRetentionInDays: ${self:custom.logRetentionInDays.${self:custom.stage}}
+  apiGateway:
+    binaryMediaTypes:
+      - "*/*"
 
 functions:
   app:
     handler: index.handler
     events:
-      - http: ANY /
-      - http: "ANY {proxy+}"
+      - http:
+          method: ANY
+          path: /
+          cors: true
+      - http:
+          method: ANY
+          path: "{proxy+}"
+          cors: true
+
+  jwtTokenTest:
+    handler: index.handler
+    events:
+      - http: "GET /tokentest"
+
+  postLogin:
+    handler: index.handler
+    events:
+      - http: "POST /login"
+
+  getFormSubmissions:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{proxy}/submissions"
+  getFormSubmission:
+    handler: index.handler
+    events:
+      - http: "GET /forms/{proxy}/submissions/{id}"
+  createFormSubmission:
+    handler: index.handler
+    events:
+      - http:
+          method: POST
+          path: "/forms/{proxy}/submissions"
+          cors: true
+    environment:
+      BUCKET: ${self:custom.WebriQ_Forms_Bucket}
+  deleteFormSubmissions:
+    handler: index.handler
+    events:
+      - http: "DELETE /forms/{proxy}/submissions"
+  deleteFormSubmission:
+    handler: index.handler
+    events:
+      - http: "DELETE /forms/{proxy}/submissions/{id}"
 
   createForm:
     handler: index.handler
@@ -76,71 +129,89 @@ functions:
     handler: index.handler
     events:
       - http: "GET /forms"
+  getFormByURL:
+    handler: index.handler
+    events:
+      - http:
+          method: GET
+          path: "/forms/{proxy}/url"
+          cors: true
   getForm:
     handler: index.handler
     events:
-      - http: "GET /forms/{proxy+}"
+      - http: "GET /forms/{proxy}"
 
   updateForm:
     handler: index.handler
     events:
-      - http: "PUT /forms/{proxy+}"
+      - http: "PUT /forms/{proxy}"
   deleteForm:
     handler: index.handler
     events:
-      - http: "DELETE /forms/{proxy+}"
+      - http: "DELETE /forms/{proxy}"
 
   getJSLib:
     handler: index.handler
     events:
-      - http: "GET /js/initForms"
+      - http:
+          method: GET
+          path: "/js/initForms"
+          cors: true
   getReactJSLib:
     handler: index.handler
     events:
-      - http: "GET /js/initReactForms"
+      - http:
+          method: GET
+          path: "/js/initReactForms"
+          cors: true
 
 plugins:
   - serverless-offline
+  - serverless-s3-local
   - serverless-dynamodb-local
 
 resources:
   Resources:
-    FormsDynamoDBTable:
+    WebriQFormsDynamoDBTable:
       Type: "AWS::DynamoDB::Table"
       Properties:
-        TableName: ${self:custom.WF_Forms_TableName}
+        TableName: ${self:custom.WebriQ_Forms_TableName}
         AttributeDefinitions:
-          - AttributeName: _id
+          - AttributeName: _type
             AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
         KeySchema:
-          - AttributeName: _id
+          - AttributeName: _type
             KeyType: HASH
-        BillingMode: PAY_PER_REQUEST
-
-    SubmissionsDynamoDBTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        TableName: ${self:custom.WF_FormSubmissions_TableName}
-        AttributeDefinitions:
-          - AttributeName: _id
-            AttributeType: S
-          - AttributeName: _form
-            AttributeType: S
-        KeySchema:
-          - AttributeName: _id
-            KeyType: HASH
-          - AttributeName: _form
+          - AttributeName: timestamp
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
-
-    FormNoncesDynamoDBTable:
+        TimeToLiveSpecification:
+          AttributeName: expiresAt
+          Enabled: true
+    WebriQFormsUsersDynamoDBTable:
       Type: "AWS::DynamoDB::Table"
       Properties:
-        TableName: ${self:custom.WF_FormNonces_TableName}
+        TableName: ${self:custom.WebriQ_Forms_UserTableName}
         AttributeDefinitions:
-          - AttributeName: token
+          - AttributeName: email
             AttributeType: S
         KeySchema:
-          - AttributeName: token
+          - AttributeName: email
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+    WebriQFormsS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.WebriQ_Forms_Bucket}
+        AccessControl: PublicRead
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - HEAD
+              AllowedOrigins:
+                - "*"
+              AllowedHeaders:
+                - "*"

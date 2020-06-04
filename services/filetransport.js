@@ -1,38 +1,32 @@
-const cloudinary = require("cloudinary");
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+const uuid = require("uuid/v4");
+const fs = require("fs");
+const { BUCKET, REGION, s3 } = require("../config/constants");
 
 const fileTransport = {
-  upload: file => {
-    return cloudinary.v2.uploader.upload(
-      file,
-      { use_filename: true, resource_type: "auto" },
-      (err, res) => {
-        if (err) {
-          console.log(err);
-        }
-      }
-    );
-  },
+  upload: (file) => {
+    const _id = uuid();
+    const fileExtension = file.mimetype.split("/").pop();
+    const fileName = _id + "." + fileExtension;
+    console.log("file", file);
 
-  delete: file => {
-    return cloudinary.v2.uploader.destroy(file, (err, res) => {
-      if (err) {
-        console.log(err);
-      }
-    });
-  },
+    return s3
+      .upload({
+        Bucket: BUCKET,
+        Key: fileName,
+        Body: file.buffer,
+        ACL: "public-read",
+      })
+      .promise()
+      .then((result) => {
+        console.log("result", result);
+        console.log("fileName", fileName);
 
-  deleteMultiple: file => {
-    return cloudinary.v2.api.delete_resources(file, (err, res) => {
-      if (err) {
-        console.log(err);
-      }
-    });
-  }
+        return {
+          public_id: _id,
+          secure_url: result && result.Location,
+        };
+      });
+  },
 };
 
 module.exports = fileTransport;

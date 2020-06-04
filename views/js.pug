@@ -1,6 +1,6 @@
 script.
   var url = location.host;
-  var webriqFormsApiUrl = "http://localhost:3000/forms/"
+  var webriqFormsApiUrl = "#{apiUrl}forms/"
   var getFormApiUrl = webriqFormsApiUrl + url + "/url";
   var webriqFormsDocsUrl = "#{docsUrl}";
   var postFormApiUrl = "";
@@ -47,12 +47,6 @@ script.
         // Prevents submission to existing form when multiple forms are present
         if (singleFormIndex !== 0 && ! singleForm.hasAttribute("data-form-id") ) {
           console.error(`WebriQ Forms: When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
-          return;
-        }
-
-        // Check if form id is valid for current site
-        if (!nonces.find(nonce => nonce.formId === formId)) {
-          console.error(`WebriQ Forms: Form ID: ${formId} is not valid for this site. See ${webriqFormsDocsUrl} for more info.`);
           return;
         }
 
