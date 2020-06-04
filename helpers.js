@@ -38,6 +38,228 @@ const constructFormData = (data) => {
   };
 };
 
+const constructFormUpdateData = (data, originalData) => {
+  let finalData = {
+    _type: "FORM",
+  };
+
+  const {
+    name,
+    siteUrls,
+    testUrls,
+    tags,
+    recaptcha,
+    uploadSize,
+    notifications,
+  } = data;
+
+  if (name) {
+    finalData = { ...finalData, name };
+  }
+  if (siteUrls) {
+    finalData = {
+      ...finalData,
+      siteUrls: siteUrls.map((url) => removeSiteProtocols(url)),
+    };
+  }
+  if (testUrls) {
+    finalData = {
+      ...finalData,
+      testUrls: testUrls.map((url) => removeSiteProtocols(url)),
+    };
+  }
+  if (tags) {
+    finalData = {
+      ...finalData,
+      tags: typeof tags === "string" ? [tags] : tags,
+    };
+  }
+  if (typeof recaptcha != "undefined" && recaptcha.key && recaptcha.secret) {
+    finalData = {
+      ...finalData,
+      recaptcha,
+    };
+  }
+  if (uploadSize && uploadSize === "string") {
+    finalData = {
+      ...finalData,
+      uploadSize,
+    };
+  }
+
+  let finalNotifications = {};
+  if (
+    typeof notifications != "undefined" &&
+    notifications.email &&
+    typeof notifications.email.to != "undefined"
+  ) {
+    const emailTo = notifications.email.to;
+    const to =
+      emailTo === null ? [] : typeof emailTo === "string" ? [emailTo] : emailTo;
+
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        to,
+      },
+    };
+  } else {
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        to:
+          (originalData &&
+            originalData.notifications &&
+            originalData.notifications.email &&
+            originalData.notifications.email.to) ||
+          [],
+      },
+    };
+  }
+
+  if (
+    typeof notifications != "undefined" &&
+    notifications.email &&
+    typeof notifications.email.cc != "undefined"
+  ) {
+    const emailCc = notifications.email.cc;
+    const cc =
+      emailCc === null ? [] : typeof emailCc === "string" ? [emailCc] : emailCc;
+
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        cc,
+      },
+    };
+  } else {
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        cc:
+          (originalData &&
+            originalData.notifications &&
+            originalData.notifications.email &&
+            originalData.notifications.email.cc) ||
+          [],
+      },
+    };
+  }
+
+  if (
+    typeof notifications != "undefined" &&
+    notifications.email &&
+    typeof notifications.email.bcc != "undefined"
+  ) {
+    const emailBcc = notifications.email.bcc;
+    const bcc =
+      emailBcc === null
+        ? []
+        : typeof emailBcc === "string"
+        ? [emailBcc]
+        : emailBcc;
+
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        bcc,
+      },
+    };
+  } else {
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        bcc:
+          (originalData &&
+            originalData.notifications &&
+            originalData.notifications.email &&
+            originalData.notifications.email.bcc) ||
+          [],
+      },
+    };
+  }
+
+  if (
+    typeof notifications != "undefined" &&
+    notifications.email &&
+    typeof notifications.email.subject != "undefined"
+  ) {
+    const emailSubject = notifications.email.subject;
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        subject: emailSubject,
+      },
+    };
+  } else {
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        subject:
+          (originalData &&
+            originalData.notifications &&
+            originalData.notifications.email &&
+            originalData.notifications.email.subject) ||
+          null,
+      },
+    };
+  }
+
+  if (
+    typeof notifications != "undefined" &&
+    notifications.email &&
+    typeof notifications.email.from != "undefined"
+  ) {
+    const emailFrom = notifications.email.from;
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        from: emailFrom,
+      },
+    };
+  } else {
+    finalNotifications = {
+      ...finalNotifications,
+      email: {
+        ...finalNotifications.email,
+        from:
+          (originalData &&
+            originalData.notifications &&
+            originalData.notifications.email &&
+            originalData.notifications.email.from) ||
+          null,
+      },
+    };
+  }
+
+  if (typeof notifications != "undefined" && notifications.webhooks) {
+    const notificationWebhooks = notifications.webhooks.map((webhook) =>
+      cleanupWebhook(webhook)
+    );
+    finalNotifications = {
+      ...finalNotifications,
+      webhooks: notificationWebhooks,
+    };
+  } else {
+    console.log("yere");
+    finalNotifications = {
+      ...finalNotifications,
+      webhooks: originalData.notifications.webhooks,
+    };
+  }
+
+  return { ...finalData, ...{ notifications: finalNotifications } };
+};
+
 const constructFormSubmissionData = ({ data, attachments = [] }) => {
   const _id = uuid();
   const now = new Date();
@@ -104,6 +326,24 @@ const constructNonceData = (data) => {
   };
 };
 
+function cleanupWebhook(webhook) {
+  if (webhook && !webhook.url) {
+    console.log("Invalid webhook without URL");
+    return null;
+  }
+
+  return {
+    url: webhook && webhook.url,
+    name: (webhook && webhook.name) || "New Webhook",
+    status:
+      (webhook &&
+        webhook.status &&
+        ["enabled", "disabled"].includes(webhook.status) &&
+        webhook.status) ||
+      "enabled",
+  };
+}
+
 const sanitizeForms = (json) => {
   if (json.length) {
     let str = [];
@@ -164,6 +404,7 @@ const removeSiteProtocols = (urls) => {
 
 module.exports = {
   constructFormData,
+  constructFormUpdateData,
   constructFormSubmissionData,
   constructNonceData,
   removeSiteProtocols,

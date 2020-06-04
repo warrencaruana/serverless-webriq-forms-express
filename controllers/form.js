@@ -1,13 +1,18 @@
 const flatten = require("lodash.flatten");
 const uniq = require("lodash.uniq");
 const uuidValidate = require("uuid-validate");
+const isEmpty = require("lodash.isempty");
 const JavaScriptObfuscator = require("javascript-obfuscator");
 
 const { IS_OFFLINE } = require("../config/constants");
 
 const { forms } = require("../services/db");
 
-const { constructFormData, sanitizeForms } = require("../helpers");
+const {
+  constructFormData,
+  constructFormUpdateData,
+  sanitizeForms,
+} = require("../helpers");
 
 const initialFormData = {
   referer: null,
@@ -112,13 +117,27 @@ exports.postForms = async (req, res) => {
 exports.putUpdateForms = async (req, res) => {
   const originalForm = req.formById;
   const id = req.params.id;
-  const data = constructFormData({
-    ...req.body,
-    timestamp: originalForm.timestamp,
-  });
+
+  if (!originalForm) {
+    return res.status(400).json({ message: "Form is not found!" });
+  }
+
+  if (isEmpty(req.body)) {
+    return res
+      .status(400)
+      .json({ message: "You need to pass data to update form!" });
+  }
+  const data = constructFormUpdateData(req.body, originalForm);
+
+  console.log("exports.putUpdateForms -> req.body", req.body);
+  console.log("exports.putUpdateForms -> originalForm", originalForm);
+  console.log("exports.putUpdateForms -> data", data);
 
   try {
-    const result = await forms.update(id, data);
+    const result = await forms.update(id, {
+      ...data,
+      timestamp: originalForm.timestamp, // hash key
+    });
     console.log("result", result);
 
     if (result) {

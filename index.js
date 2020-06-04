@@ -56,11 +56,7 @@ app.post(
 );
 app.put(
   "/forms/:id",
-  [
-    jwtMiddleware.verifyToken,
-    submissionMiddleware.checkFormIdIsValid,
-    formMiddleware.sanitizeFormData,
-  ],
+  [jwtMiddleware.verifyToken, submissionMiddleware.checkFormIdIsValid],
   form.putUpdateForms
 );
 app.delete(

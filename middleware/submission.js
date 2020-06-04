@@ -94,14 +94,14 @@ exports.checkFormIdIsValid = async (req, res, next) => {
   //   "req.params.formId || req.params.id",
   //   req.params.formId || req.params.id
   // );
+  console.log(
+    "Checking form resource ID is valid: " + req.params.formId || req.params.id
+  );
   const formById = await forms.getById(req.params.formId || req.params.id);
-  // console.log("formById", formById);
-
-  if (!formById || !formById.Items) {
-    res.status(404).json({
+  if (!formById || !formById.Items || !formById.Items.length > 0) {
+    return res.status(404).json({
       message: "Form resource not found by ID!",
     });
-    return;
   }
 
   // If found, attach formById for use later
