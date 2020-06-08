@@ -134,11 +134,13 @@ exports.postFormSubmissions = async (req, res) => {
             mailer.sendMail(mailOptions, (err) => {
               if (err) {
                 // @todo: log as sending email sending failed
-                console.log({
-                  message: "Something went wrong",
-                  errors: [{ msg: err }],
-                });
-                reject(err);
+                console.log(
+                  JSON.stringify({
+                    message: "Something went wrong sending email",
+                    errors: [{ msg: err }],
+                  })
+                );
+                // reject(err);
               }
 
               console.log("[OK] Email sent to " + mailOptions.to);
