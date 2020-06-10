@@ -47,6 +47,8 @@ provider:
         - ses:SendRawEmail
       Resource: "*"
   environment:
+    ACCESS_KEY_ID: ${param:ACCESS_KEY_ID}
+    ACCESS_SECRET_KEY: ${param:ACCESS_SECRET_KEY}
     WEBRIQ_FORMS_TABLE: ${self:custom.WebriQ_Forms_TableName}
     WEBRIQ_FORMS_USERS_TABLE: ${self:custom.WebriQ_Forms_UserTableName}
     BUCKET: ${self:custom.WebriQ_Forms_Bucket}
