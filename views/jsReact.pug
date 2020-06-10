@@ -60,88 +60,107 @@ script.
       });
   }
 
-  function assignFormHandlers(formIds) {
-    var forms = document.querySelectorAll("form[webriq]");
+  function formSubmitHandler(e) {
+    e.preventDefault();
 
-    forms.forEach(function(singleForm, singleFormIndex) {
-      singleForm.addEventListener("submit", function(e) {
-        e.preventDefault();
+    const forms = document.querySelectorAll("form[webriq]");
+    const singleForm = e.target;
+    const singleFormIndex = Array.from(forms).indexOf(singleForm);
+    const nonces = JSON.parse('!{formNonces}');
+    const getNonceForFormId = (nonces, formId) => nonces.find(form => form.formId === formId) && nonces.find(form => form.formId === formId).nonce;
 
-        const nonces = JSON.parse('!{formNonces}');
-        const getNonceForFormId = (nonces, formId) => nonces.find(form => form.formId === formId) && nonces.find(form => form.formId === formId).nonce;
+    const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
+    const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
 
-        const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
-        const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
+    // When testing, data-form-id attribute must be specified
+    if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
+      console.error(`WebriQ Forms: When testing forms in localhost, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
+      return;
+    }
 
-        // When testing, data-form-id attribute must be specified
-        if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
-          console.error(`WebriQ Forms: When testing forms in localhost, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
-          return;
-        }
+    // Prevents submission to existing form when multiple forms are present
+    if (singleFormIndex !== 0 && ! singleForm.hasAttribute("data-form-id") ) {
+      console.error(`WebriQ Forms: When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
+      return;
+    }
 
-        // Prevents submission to existing form when multiple forms are present
-        if (singleFormIndex !== 0 && ! singleForm.hasAttribute("data-form-id") ) {
-          console.error(`WebriQ Forms: When using multiple forms in a page, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
-          return;
-        }
+    var thankYou = location.origin;
+    if (singleForm.hasAttribute("data-thankyou-url")) {
+      thankYou = singleForm.getAttribute("data-thankyou-url");
+    } else {
+      thankYou += "/thank-you";
+    }
 
-        var thankYou = location.origin;
-        if (singleForm.hasAttribute("data-thankyou-url")) {
-          thankYou = singleForm.getAttribute("data-thankyou-url");
+    let infoMessage;
+    if (document.querySelectorAll('.infoMessage-' + singleFormIndex).length > 0) {
+      infoMessage = document.querySelectorAll('.infoMessage-' + singleFormIndex)[0];
+    } else {
+      infoMessage = document.createElement("div");
+    }
+
+    if (! sendingLabelShown) {
+      // Disable submit and show message that form is being submitted
+      e.srcElement.querySelectorAll("[type='submit']")[0].disabled = true;
+
+      infoMessage.className = 'infoMessage-' + singleFormIndex;
+      infoMessage.style.cssText = 'display: block;background-color:#cce5ff;border-color:#b8daff;margin:10px 0;padding:10px;border-radius:3px;color:#004085;';
+      infoMessage.innerHTML = `Sending form data<span id="wait">.</span>`;
+      singleForm.before(infoMessage);
+
+      var dots = window.setInterval( function() {
+        var wait = document.getElementById("wait");
+        if ( wait && wait.innerHTML.length > 2 ) {
+          wait.innerHTML = ".";
         } else {
-          thankYou += "/thank-you";
+          wait.innerHTML += ".";
         }
+      }, 500);
+    }
 
-        if (! sendingLabelShown) {
-          // Disable submit and show message that form is being submitted
-          e.srcElement.querySelectorAll("[type='submit']")[0].disabled = true;
+    sendingLabelShown = true;
 
-          if (document.querySelectorAll('.errorMessage').length) {
-            var infoMessage = document.querySelectorAll('.infoMessage')[0];
-          } else {
-            var infoMessage = document.createElement("div");
-          }
+    postAjax(postFormApiUrl, singleForm, getNonceForFormId(nonces, formId))
+      .then(data => {
+        singleForm.reset();
+        e.srcElement.querySelectorAll("[type='submit']")[0].disabled = false;
+        clearInterval(dots);
+        infoMessage.innerHTML = `✔ Successfully sent form data! Redirecting<span id='wait'>.</span>`;
+        infoMessage.style.cssText = 'display: block;background-color:#d4edda;border-color:#c3e6cb;margin:10px 0;padding:10px;border-radius:3px;color:#155724;';
 
-          infoMessage.className = 'infoMessage';
-          infoMessage.style.cssText = 'display: block;color:#004085;background-color:#cce5ff;border-color:#b8daff;margin:10px 0;padding:10px;border-radius:3px;';
-          infoMessage.innerHTML = `Sending form data<span id="wait">.</span>`;
-          singleForm.before(infoMessage);
-
-          var dots = window.setInterval( function() {
-            var wait = document.getElementById("wait");
+        var dots2 = window.setInterval( function() {
+          var wait = document.getElementById("wait");
+          if (wait) {
             if ( wait.innerHTML.length > 2 ) {
               wait.innerHTML = ".";
             } else {
               wait.innerHTML += ".";
             }
-          }, 500);
-        }
+          }
+        }, 500);
 
-        sendingLabelShown = true;
+        setTimeout(function() {
+          clearInterval(dots2);
+          window.location.href = thankYou;
+        }, 1500);
+      })
+      .catch(err => {
+        e.srcElement.querySelectorAll("[type='submit']")[0].disabled = false;
+        clearInterval(dots);
+        sendingLabelShown = false;
 
-        postAjax(postFormApiUrl, singleForm, getNonceForFormId(nonces, formId))
-          .then(data => {
-            window.location.href = thankYou;
-          })
-          .catch(err => {
-            e.srcElement.querySelectorAll("[type='submit']")[0].disabled = false;
-            document.querySelector('.infoMessage').setAttribute('style', "display: none;");
-            clearInterval(dots);
-            sendingLabelShown = false;
+        infoMessage.style.cssText = 'display:block;background-color:#ffbaba;margin:10px 0;padding:10px;border-radius:3px;color:#721c24';
+        infoMessage.innerHTML = (err && err.message) || `✖ Something went wrong submitting form data! Please <a href="${location && location.href}" style="color: #721c24;font-weight: bold;text-decoration: underline !important;">refresh page and try again...</a>`;
 
-            if (document.querySelectorAll('.errorMessage').length) {
-              var errmsg = document.querySelectorAll('.errorMessage')[0];
-            } else {
-              var errmsg = document.createElement("div");
-            }
-            errmsg.className = 'errorMessage';
-            errmsg.style.cssText = 'color:#D8000C;background-color:#FFBABA;margin:10px 0;padding:10px;border-radius:3px;';
-            errmsg.innerHTML = (err && err.message) || `✖ Something went wrong submitting form data! Please refresh page and try again...`;
-            singleForm.before(errmsg);
-
-            console.error(err);
-          });
+        console.error(err);
       });
+  }
+
+  function assignFormHandlers(formIds) {
+    var forms = document.querySelectorAll("form[webriq]");
+
+    forms.forEach(function(singleForm, singleFormIndex) {
+      singleForm.removeEventListener("submit", formSubmitHandler);
+      singleForm.addEventListener("submit", formSubmitHandler);
     });
   }
 

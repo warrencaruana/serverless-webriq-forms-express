@@ -35,7 +35,6 @@ exports.getFormSubmissions = async (req, res) => {
  * POST /forms/:id/submissions
  */
 exports.postFormSubmissions = async (req, res) => {
-  // @todo: validation goes here
   const form = req.formById;
   console.log("form", form);
   const files = req.files;

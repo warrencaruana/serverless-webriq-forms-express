@@ -50,7 +50,12 @@ exports.getFormsByURL = async (req, res) => {
       formsResult = sanitizeForms(formsResult.Items);
     }
 
-    return res.status(200).json(sanitizeForms(formsResult));
+    const formsResponse = sanitizeForms(formsResult).map((form) => ({
+      siteUrls: form.siteUrls,
+      recaptcha: form.recaptcha,
+    }));
+
+    return res.status(200).json(formsResponse);
   } catch (error) {
     console.log("error", error);
     return res.status(500).json({
