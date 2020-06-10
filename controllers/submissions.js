@@ -123,7 +123,10 @@ exports.postFormSubmissions = async (req, res) => {
               to: emailTo,
               cc: form.notifications.email.cc || null,
               bcc: form.notifications.email.bcc || null,
-              from: form.notifications.email.from || "no-reply@webriq.me",
+              from:
+                form.notifications.email.from ||
+                process.env.APP_MAIL_FROM ||
+                "no-reply@webriq.me",
               subject: form.notifications.email.subject
                 ? form.notifications.email.subject
                 : "New Form Submission via WebriQ Forms",
