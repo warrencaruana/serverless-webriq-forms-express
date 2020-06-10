@@ -49,6 +49,7 @@ exports.postFormSubmissions = async (req, res) => {
     },
   });
   const formData = data;
+  console.log("exports.postFormSubmissions -> data", data);
 
   if (error) {
     res.status(400).json(message);
@@ -59,7 +60,7 @@ exports.postFormSubmissions = async (req, res) => {
     console.log("data in createSubmission", data);
     return new Promise(async (resolve, reject) => {
       try {
-        await submissions.create(data);
+        await submissions.createByTransaction(data);
 
         resolve(data);
       } catch (error) {

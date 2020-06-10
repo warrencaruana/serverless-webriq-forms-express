@@ -124,7 +124,7 @@ const forms = {
       UpdateExpression: "SET " + UpdateExpressionList.join(","),
       ExpressionAttributeNames,
       ExpressionAttributeValues,
-      ReturnValues: "UPDATED_NEW",
+      ReturnValues: "ALL_NEW",
     };
 
     return new Promise((resolve, reject) => {
@@ -188,6 +188,29 @@ const submissions = {
     return dynamoDb.query(params).promise();
   },
 
+  getByFormIdAndNonce(formId, nonce) {
+    const params = {
+      TableName: WEBRIQ_FORMS_TABLE,
+      KeyConditionExpression: "#type = :type",
+      FilterExpression: "#nonce = :nonce AND #form = :form",
+      ExpressionAttributeNames: {
+        "#type": "_type",
+        "#form": "_form",
+        "#nonce": "_nonce",
+      },
+      ExpressionAttributeValues: {
+        ":type": "SUBMISSION",
+        ":form": formId,
+        ":nonce": nonce,
+      },
+      ConsistentRead: true,
+      ScanIndexForward: false,
+    };
+    console.log("getByFormIdAndNonce -> params", params);
+
+    return dynamoDb.query(params).promise();
+  },
+
   getByFormIdAndId(formId, id) {
     const params = {
       TableName: WEBRIQ_FORMS_TABLE,
@@ -217,6 +240,35 @@ const submissions = {
 
     return new Promise((resolve, reject) => {
       dynamoDb.put(params, (error, result) => {
+        if (error) {
+          console.log(error);
+          reject(error);
+        }
+
+        resolve(data);
+      });
+    });
+  },
+
+  createByTransaction(data) {
+    const params = {
+      ClientRequestToken: data._nonce,
+      TransactItems: [
+        {
+          Put: {
+            TableName: WEBRIQ_FORMS_TABLE,
+            Item: data, // contains type and _timestamp
+          },
+        },
+      ],
+    };
+    console.log(
+      "createByTransaction -> params",
+      JSON.stringify(params, null, 2)
+    );
+
+    return new Promise((resolve, reject) => {
+      dynamoDb.transactWrite(params, (error, result) => {
         if (error) {
           console.log(error);
           reject(error);

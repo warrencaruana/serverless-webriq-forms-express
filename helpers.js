@@ -295,6 +295,7 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
       _type: "SUBMISSION",
       timestamp: now.getTime(),
       _form: formId,
+      _nonce: data && data._nonce,
       payload: formData,
       attachments: [],
       createdAt: now.toISOString(),

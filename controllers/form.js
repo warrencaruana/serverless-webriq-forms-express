@@ -253,7 +253,7 @@ exports.initLib = async (req, res) => {
     }
   }
 
-  console.log("formsData", formsData);
+  // console.log("formsData", formsData);
   if (!formsData || formsData.length < 1) {
     return {
       error: true,
@@ -264,6 +264,28 @@ exports.initLib = async (req, res) => {
 
   let formNonces = [];
   let siteUrls = [];
+
+  formsData.forEach(async (form) => {
+    const currentNonce = generateNonce();
+
+    // Push new _nonces and siteUrls
+    try {
+      formNonces.push({
+        formId: form && form._id,
+        nonce: currentNonce,
+      });
+
+      siteUrls.push(form.siteUrls);
+    } catch (err) {
+      console.log("err", err);
+      // unable to push nonce or siteUrls
+      return {
+        error: true,
+        message: "Unable to push nonce or siteUrls!",
+        data: [],
+      };
+    }
+  });
 
   siteUrls = uniq(flatten(siteUrls));
   console.log("siteUrls", siteUrls);

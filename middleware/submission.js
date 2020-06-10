@@ -16,6 +16,18 @@ exports.checkBodyIsNotEmpty = async (req, res, next) => {
   next();
 };
 
+exports.checkNonceIsPresent = (req, res, next) => {
+  const { _nonce } = req.body;
+
+  if (!_nonce) {
+    return res.status(400).json({
+      message: "Invalid form submission request. Security feature not met!",
+    });
+  }
+
+  next();
+};
+
 exports.checkNonceIsValid = async (req, res, next) => {
   const origin = req.get("origin");
   const referer = req.get("referer");
