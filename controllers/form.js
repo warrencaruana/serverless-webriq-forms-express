@@ -12,6 +12,8 @@ const {
   constructFormData,
   constructFormUpdateData,
   sanitizeForms,
+  removeSiteProtocols,
+  attachSchemeIfNotExists,
 } = require("../helpers");
 
 const initialFormData = {
@@ -227,9 +229,23 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
 exports.initLib = async (req, res) => {
   let formsData = [];
 
+  console.log("req.headers", req.headers);
+  console.log("req.get('host')", req.get("host"));
+  console.log("req.get('origin')", req.get("origin"));
+  console.log("req.get('referer')", req.get("referer"));
+
   let url;
+  let referer;
+
   try {
-    url = new URL(req.headers && req.headers.referer);
+    url = new URL(
+      req &&
+        req.headers &&
+        (attachSchemeIfNotExists(req.headers.host) ||
+          attachSchemeIfNotExists(req.headers.origin) ||
+          attachSchemeIfNotExists(req.headers.referer))
+    );
+    console.log("url", url);
   } catch (err) {
     return {
       error: true,
@@ -238,7 +254,8 @@ exports.initLib = async (req, res) => {
     };
   }
 
-  const referer = url && !url.host ? url.href : url.host;
+  referer = url && !url.host ? url.href : url.host;
+
   console.log("referer", referer);
 
   if (referer) {
