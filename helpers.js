@@ -403,14 +403,6 @@ const removeSiteProtocols = (urls) => {
   return urls;
 };
 
-const attachSchemeIfNotExists = (url, scheme = "https") => {
-  if (!(url.startsWith("http://") || url.startsWith("https://"))) {
-    return `${scheme}://${url}`;
-  }
-
-  return url;
-};
-
 module.exports = {
   constructFormData,
   constructFormUpdateData,
@@ -419,5 +411,4 @@ module.exports = {
   removeSiteProtocols,
   sanitizeForms,
   sanitizeSubmissions,
-  attachSchemeIfNotExists,
 };
