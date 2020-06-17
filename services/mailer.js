@@ -28,6 +28,4 @@ if (IS_OFFLINE === "true") {
   // });
 }
 
-console.log("transporter", transporter);
-
 module.exports = transporter;

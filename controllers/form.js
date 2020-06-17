@@ -68,7 +68,12 @@ exports.getFormsByURL = async (req, res) => {
  * so can't rename to something else.
  */
 exports.getFormsByIdOrURL = async (req, res) => {
-  const isRequestParamValidId = (val) => uuidValidate(val, 4);
+  const isRequestParamValidId = (val) => {
+    // regex for valid Mongo ObjectId
+    const objectIdRegex = new RegExp("^[0-9a-fA-F]{24}$");
+
+    return uuidValidate(val, 4) || objectIdRegex.test(val);
+  };
 
   if (!isRequestParamValidId(req.params.id)) {
     return this.getFormsByURL(req, res);
@@ -78,7 +83,7 @@ exports.getFormsByIdOrURL = async (req, res) => {
     const result = await forms.getById(req.params.id);
     console.log("result", result);
 
-    if (result && result.Items) {
+    if (result && result.Count > 0) {
       return res.json(sanitizeForms(result.Items[0]));
     }
 
