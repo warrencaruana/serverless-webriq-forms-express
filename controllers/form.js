@@ -12,6 +12,7 @@ const {
   constructFormData,
   constructFormUpdateData,
   sanitizeForms,
+  getValidURLs,
 } = require("../helpers");
 
 const initialFormData = {
@@ -218,13 +219,13 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
         controlFlowFlattening: true,
         // deadCodeInjection: true,
         selfDefending: true, // code resilient against formating and variable renaming
-        domainLock: siteUrls, // prevents code executing from domain
+        domainLock: getValidURLs(siteUrls), // prevents code executing from domain
         transformObjectKeys: true,
         unicodeEscapeSequence: true,
       });
 
-      // res.type("js").send(jsFile.getObfuscatedCode());
-      res.type("js").send(jsOutput);
+      res.type("js").send(jsFile.getObfuscatedCode());
+      // res.type("js").send(jsOutput);
     }
   );
 };
@@ -293,6 +294,7 @@ exports.initLib = async (req, res) => {
   });
 
   siteUrls = uniq(flatten(siteUrls));
+  siteUrls = getValidURLs(siteUrls);
   console.log("siteUrls", siteUrls);
 
   return {

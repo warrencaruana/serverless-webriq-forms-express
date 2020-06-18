@@ -1,6 +1,7 @@
 const uuid = require("uuid/v4");
 const get = require("lodash.get");
 const omit = require("lodash.omit");
+const uniq = require("lodash.uniq");
 
 const constructFormData = (data) => {
   const _id = uuid();
@@ -59,13 +60,13 @@ const constructFormUpdateData = (data, originalData) => {
   if (siteUrls) {
     finalData = {
       ...finalData,
-      siteUrls: siteUrls.map((url) => removeSiteProtocols(url)),
+      siteUrls: getValidURLs(siteUrls),
     };
   }
   if (testUrls) {
     finalData = {
       ...finalData,
-      testUrls: testUrls.map((url) => removeSiteProtocols(url)),
+      testUrls: getValidURLs(testUrls),
     };
   }
   if (tags) {
@@ -403,12 +404,30 @@ const removeSiteProtocols = (urls) => {
   return urls;
 };
 
+const isValidDomain = (v) => {
+  if (!v) return false;
+  var re = /^(?!:\/\/)([a-zA-Z0-9-]+\.){0,5}[a-zA-Z0-9-][a-zA-Z0-9-]+\.[a-zA-Z]{2,64}?$/gi;
+  return re.test(v);
+};
+
+const getValidURLs = (urls) => {
+  const bareUrls = urls.map((url) =>
+    removeSiteProtocols(url).replace(/\/$/, "")
+  );
+  let validUrls = bareUrls.filter((url) => {
+    return isValidDomain(url) || url.startsWith("localhost");
+  });
+
+  return uniq(validUrls);
+};
+
 module.exports = {
   constructFormData,
   constructFormUpdateData,
   constructFormSubmissionData,
   constructNonceData,
   removeSiteProtocols,
+  getValidURLs,
   sanitizeForms,
   sanitizeSubmissions,
 };
