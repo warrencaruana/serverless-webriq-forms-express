@@ -5,7 +5,7 @@ script.
   var webriqFormsDocsUrl = "#{docsUrl}";
   var postFormApiUrl = "";
   var sitekey = "";
-  var dataId = 0;
+  var dataId = 1;
   var sendingLabelShown = false;
   var isWebriQFormLoaded = true
 
@@ -17,6 +17,8 @@ script.
         var counter = 1;
         formIds = data;
 
+        console.log('data', data);
+
         var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
         recaptchaDivs.forEach(div => {
           if (! div.getAttribute("sitekey")) {
@@ -25,7 +27,14 @@ script.
         });
 
         if (recaptchaDivs.length) {
-          loadRecaptcha(formIds[dataId].recaptcha.key);
+          if(formIds[dataId].recaptcha.version) {
+            if(formIds[dataId].recaptcha.version == 'v3') {
+              loadRecaptchaV3(formIds[dataId].recaptcha.key);
+            }
+          } else {
+            //v2
+            loadRecaptchaV2(formIds[dataId].recaptcha.key);
+          }
         }
 
         assignFormHandlers(formIds);
@@ -72,6 +81,8 @@ script.
     const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
     const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
 
+
+    console.log('submit', singleForm.hasAttribute("data-form-id"));
     // When testing, data-form-id attribute must be specified
     if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
       console.error(`WebriQ Forms: When testing forms in localhost, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
@@ -164,11 +175,25 @@ script.
     });
   }
 
-  function loadRecaptcha(sitekey) {
+  function loadRecaptchaV3(sitekey) {
     if (!document.getElementById("webriqFormRecaptcha")) {
       let scriptTag = document.createElement("script");
       let headTag = document.querySelector("head");
-      scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js?onload=renderCaptcha&render=explicit");
+      scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js");
+      scriptTag.setAttribute("async", "");
+      scriptTag.setAttribute("defer", "");
+      scriptTag.setAttribute("id", "webriqFormRecaptcha");
+      headTag.parentNode.insertBefore(scriptTag, headTag.nextSibling);
+
+      renderCaptchaV3();
+    }
+  }
+
+  function loadRecaptchaV2(sitekey) {
+    if (!document.getElementById("webriqFormRecaptcha")) {
+      let scriptTag = document.createElement("script");
+      let headTag = document.querySelector("head");
+      scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js?onload=renderCaptchaV2&render=explicit");
       scriptTag.setAttribute("async", "");
       scriptTag.setAttribute("defer", "");
       scriptTag.setAttribute("id", "webriqFormRecaptcha");
@@ -176,7 +201,25 @@ script.
     }
   }
 
-  function renderCaptcha() {
+  function renderCaptchaV3() {
+    console.log('test');
+    var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+    var button = document.querySelectorAll("form[webriq] button");
+    console.log('button', button);
+    var currentSiteKey = '';
+    recaptchaDivs.forEach(div => {
+      // Explicitly call our recaptcha to render back
+      currentSiteKey = div.getAttribute("sitekey");
+    });
+    console.log('currentSitekey', currentSiteKey);
+    button[0].setAttribute('data-sitekey', currentSiteKey);
+    button[0].setAttribute('class', 'g-recaptcha');
+    button[0].setAttribute('data-action', 'submit');
+    button[0].setAttribute('data-callback', formSubmitHandler);
+    console.log('recaptcha divs', recaptchaDivs);
+  }
+
+  function renderCaptchaV2() {
     var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
 
     recaptchaDivs.forEach(div => {

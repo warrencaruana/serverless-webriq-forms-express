@@ -16,6 +16,7 @@ const constructFormData = (data) => {
     testUrls: get(data, "testUrls", []),
     tags: get(data, "tags", []),
     recaptcha: {
+      version: get(data, "recaptcha.version"),
       key: get(data, "recaptcha.key", process.env.APP_DEFAULT_RECAPTCHA_KEY),
       secret: get(
         data,
