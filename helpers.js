@@ -17,11 +17,19 @@ const constructFormData = (data) => {
     tags: get(data, "tags", []),
     recaptcha: {
       version: get(data, "recaptcha.version"),
-      key: get(data, "recaptcha.key", process.env.APP_DEFAULT_RECAPTCHA_KEY),
+      key: get(
+        data,
+        "recaptcha.key",
+        data.recaptcha.version == "v3"
+          ? process.env.APP_V3_RECAPTCHA_KEY
+          : process.env.APP_DEFAULT_RECAPTCHA_KEY
+      ),
       secret: get(
         data,
         "recaptcha.secret",
-        process.env.APP_DEFAULT_RECAPTCHA_SECRET
+        data.recaptcha.version == "v3"
+          ? process.env.APP_V3_RECAPTCHA_SECRET
+          : process.env.APP_DEFAULT_RECAPTCHA_SECRET
       ),
     },
     uploadSize: get(data, "uploadSize", "10MB"),
