@@ -35,7 +35,6 @@ exports.getFormSubmissions = async (req, res) => {
  * POST /forms/:id/submissions
  */
 exports.postFormSubmissions = async (req, res) => {
-  // @todo: validation goes here
   const form = req.formById;
   console.log("form", form);
   const files = req.files;
@@ -49,6 +48,7 @@ exports.postFormSubmissions = async (req, res) => {
     },
   });
   const formData = data;
+  console.log("exports.postFormSubmissions -> data", data);
 
   if (error) {
     res.status(400).json(message);
@@ -59,7 +59,7 @@ exports.postFormSubmissions = async (req, res) => {
     console.log("data in createSubmission", data);
     return new Promise(async (resolve, reject) => {
       try {
-        await submissions.create(data);
+        await submissions.createByTransaction(data);
 
         resolve(data);
       } catch (error) {
@@ -124,7 +124,9 @@ exports.postFormSubmissions = async (req, res) => {
               cc: form.notifications.email.cc || null,
               bcc: form.notifications.email.bcc || null,
               from:
-                form.notifications.email.from || "no-reply@forms.webriq.com",
+                form.notifications.email.from ||
+                process.env.APP_MAIL_FROM ||
+                "no-reply@webriq.me",
               subject: form.notifications.email.subject
                 ? form.notifications.email.subject
                 : "New Form Submission via WebriQ Forms",
@@ -134,11 +136,13 @@ exports.postFormSubmissions = async (req, res) => {
             mailer.sendMail(mailOptions, (err) => {
               if (err) {
                 // @todo: log as sending email sending failed
-                console.log({
-                  message: "Something went wrong",
-                  errors: [{ msg: err }],
-                });
-                reject(err);
+                console.log(
+                  JSON.stringify({
+                    message: "Something went wrong sending email",
+                    errors: [{ msg: err }],
+                  })
+                );
+                // reject(err);
               }
 
               console.log("[OK] Email sent to " + mailOptions.to);

@@ -42,6 +42,10 @@ provider:
       Action:
         - s3:*
       Resource: "arn:aws:s3:::${self:custom.WebriQ_Forms_Bucket}/*"
+    - Effect: Allow
+      Action:
+        - ses:SendRawEmail
+      Resource: "*"
   environment:
     WEBRIQ_FORMS_TABLE: ${self:custom.WebriQ_Forms_TableName}
     WEBRIQ_FORMS_USERS_TABLE: ${self:custom.WebriQ_Forms_UserTableName}
@@ -49,10 +53,13 @@ provider:
     APP_URL: ${param:APP_URL, "https://forms.webriq.com"}
     APP_STAGE: ${self:custom.stage}
     APP_REGION: ${self:custom.region}
+    APP_MAIL_FROM: ${param:APP_MAIL_FROM}
     APP_DEFAULT_RECAPTCHA_KEY: ${param:APP_DEFAULT_RECAPTCHA_KEY, "6Lc0DGoUAAAAAMVQyBWYOoBPROnXpLoK1vvF_vx8"}
     APP_DEFAULT_RECAPTCHA_SECRET: ${param:APP_DEFAULT_RECAPTCHA_SECRET, "6Lc0DGoUAAAAAEwAwSrku8PZ_eNRb_wtQtENx-S4"}
-    MAILGUN_USER: ${param:MAILGUN_USER, "postmaster@webriqshops.com"}
-    MAILGUN_PASSWORD: ${param:MAILGUN_PASSWORD, "0c7389efd226e9bee418cc83e73b0bfe"}
+    APP_V3_RECAPTCHA_KEY: ${param:APP_V3_RECAPTCHA_KEY, "6Lfmu8oZAAAAALbzT0rK835lmU7gVgJW8Cjf4RLy"}
+    APP_V3_RECAPTCHA_SECRET: ${param:APP_V3_RECAPTCHA_SECRET, "6Lfmu8oZAAAAAK9GBEMdgPllpYgJzhN-sItUo6XL"}
+    MAILGUN_USER: ${param:MAILGUN_USER, "postmaster@mg.dorelljames.com"}
+    MAILGUN_PASSWORD: ${param:MAILGUN_PASSWORD, "0ecf4725002739a3e850d6abfbadf3c0-65b08458-72c50e82"}
     MAILTRAP_USER: ${param:MAILTRAP_USER, "44314661af65a2928"}
     MAILTRAP_PASSWORD: ${param:MAILTRAP_PASSWORD, "093bfd51adeb42"}
     WEBRIQ_FORMS_API_URL:
@@ -166,9 +173,9 @@ functions:
           cors: true
 
 plugins:
-  - serverless-offline
   - serverless-s3-local
   - serverless-dynamodb-local
+  - serverless-offline
 
 resources:
   Resources:

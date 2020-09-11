@@ -1,5 +1,5 @@
 const get = require("lodash.get");
-const { removeSiteProtocols } = require("../helpers");
+const { getValidURLs } = require("../helpers");
 
 function cleanupWebhook(webhook) {
   if (webhook && !webhook.url) {
@@ -48,8 +48,8 @@ exports.sanitizeFormData = (req, res, next) => {
   }
 
   // Cleanup HTTP protocols for site and test urls
-  req.body.siteUrls = siteUrls.map((url) => removeSiteProtocols(url));
-  req.body.testUrls = testUrls.map((url) => removeSiteProtocols(url));
+  req.body.siteUrls = getValidURLs(siteUrls);
+  req.body.testUrls = getValidURLs(testUrls);
   req.body.notifications = {
     ...req.body.notifications,
     ...{ webhooks: webhooks.map((webhook) => cleanupWebhook(webhook)) },

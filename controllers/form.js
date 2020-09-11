@@ -12,6 +12,7 @@ const {
   constructFormData,
   constructFormUpdateData,
   sanitizeForms,
+  getValidURLs,
 } = require("../helpers");
 
 const initialFormData = {
@@ -68,7 +69,12 @@ exports.getFormsByURL = async (req, res) => {
  * so can't rename to something else.
  */
 exports.getFormsByIdOrURL = async (req, res) => {
-  const isRequestParamValidId = (val) => uuidValidate(val, 4);
+  const isRequestParamValidId = (val) => {
+    // regex for valid Mongo ObjectId
+    const objectIdRegex = new RegExp("^[0-9a-fA-F]{24}$");
+
+    return uuidValidate(val, 4) || objectIdRegex.test(val);
+  };
 
   if (!isRequestParamValidId(req.params.id)) {
     return this.getFormsByURL(req, res);
@@ -78,7 +84,7 @@ exports.getFormsByIdOrURL = async (req, res) => {
     const result = await forms.getById(req.params.id);
     console.log("result", result);
 
-    if (result && result.Items) {
+    if (result && result.Count > 0) {
       return res.json(sanitizeForms(result.Items[0]));
     }
 
@@ -213,13 +219,13 @@ exports.prepareJSLib = async (req, res, viewFile = "js") => {
         controlFlowFlattening: true,
         // deadCodeInjection: true,
         selfDefending: true, // code resilient against formating and variable renaming
-        domainLock: siteUrls, // prevents code executing from domain
+        domainLock: getValidURLs(siteUrls), // prevents code executing from domain
         transformObjectKeys: true,
         unicodeEscapeSequence: true,
       });
 
-      // res.type("js").send(jsFile.getObfuscatedCode());
-      res.type("js").send(jsOutput);
+      res.type("js").send(jsFile.getObfuscatedCode());
+      // res.type("js").send(jsOutput);
     }
   );
 };
@@ -253,7 +259,7 @@ exports.initLib = async (req, res) => {
     }
   }
 
-  console.log("formsData", formsData);
+  // console.log("formsData", formsData);
   if (!formsData || formsData.length < 1) {
     return {
       error: true,
@@ -265,7 +271,30 @@ exports.initLib = async (req, res) => {
   let formNonces = [];
   let siteUrls = [];
 
+  formsData.forEach(async (form) => {
+    const currentNonce = generateNonce();
+
+    // Push new _nonces and siteUrls
+    try {
+      formNonces.push({
+        formId: form && form._id,
+        nonce: currentNonce,
+      });
+
+      siteUrls.push(form.siteUrls);
+    } catch (err) {
+      console.log("err", err);
+      // unable to push nonce or siteUrls
+      return {
+        error: true,
+        message: "Unable to push nonce or siteUrls!",
+        data: [],
+      };
+    }
+  });
+
   siteUrls = uniq(flatten(siteUrls));
+  siteUrls = getValidURLs(siteUrls);
   console.log("siteUrls", siteUrls);
 
   return {

@@ -83,6 +83,7 @@ app.post(
   [
     upload.any(),
     submissionMiddleware.checkFormIdIsValid,
+    submissionMiddleware.checkNonceIsPresent,
     // submissionMiddleware.checkNonceIsValid,
     submissionMiddleware.checkSiteReferrerIsValid,
     submissionMiddleware.checkBodyIsNotEmpty,

@@ -1,6 +1,7 @@
 const uuid = require("uuid/v4");
 const get = require("lodash.get");
 const omit = require("lodash.omit");
+const uniq = require("lodash.uniq");
 
 const constructFormData = (data) => {
   const _id = uuid();
@@ -15,11 +16,20 @@ const constructFormData = (data) => {
     testUrls: get(data, "testUrls", []),
     tags: get(data, "tags", []),
     recaptcha: {
-      key: get(data, "recaptcha.key", process.env.APP_DEFAULT_RECAPTCHA_KEY),
+      version: get(data, "recaptcha.version"),
+      key: get(
+        data,
+        "recaptcha.key",
+        data.recaptcha.version == "v3"
+          ? process.env.APP_V3_RECAPTCHA_KEY
+          : process.env.APP_DEFAULT_RECAPTCHA_KEY
+      ),
       secret: get(
         data,
         "recaptcha.secret",
-        process.env.APP_DEFAULT_RECAPTCHA_SECRET
+        data.recaptcha.version == "v3"
+          ? process.env.APP_V3_RECAPTCHA_SECRET
+          : process.env.APP_DEFAULT_RECAPTCHA_SECRET
       ),
     },
     uploadSize: get(data, "uploadSize", "10MB"),
@@ -59,13 +69,13 @@ const constructFormUpdateData = (data, originalData) => {
   if (siteUrls) {
     finalData = {
       ...finalData,
-      siteUrls: siteUrls.map((url) => removeSiteProtocols(url)),
+      siteUrls: getValidURLs(siteUrls),
     };
   }
   if (testUrls) {
     finalData = {
       ...finalData,
-      testUrls: testUrls.map((url) => removeSiteProtocols(url)),
+      testUrls: getValidURLs(testUrls),
     };
   }
   if (tags) {
@@ -295,6 +305,7 @@ const constructFormSubmissionData = ({ data, attachments = [] }) => {
       _type: "SUBMISSION",
       timestamp: now.getTime(),
       _form: formId,
+      _nonce: data && data._nonce,
       payload: formData,
       attachments: [],
       createdAt: now.toISOString(),
@@ -402,12 +413,30 @@ const removeSiteProtocols = (urls) => {
   return urls;
 };
 
+const isValidDomain = (v) => {
+  if (!v) return false;
+  var re = /^(?!:\/\/)([a-zA-Z0-9-]+\.){0,5}[a-zA-Z0-9-][a-zA-Z0-9-]+\.[a-zA-Z]{2,64}?$/gi;
+  return re.test(v);
+};
+
+const getValidURLs = (urls) => {
+  const bareUrls = urls.map((url) =>
+    removeSiteProtocols(url).replace(/\/$/, "")
+  );
+  let validUrls = bareUrls.filter((url) => {
+    return isValidDomain(url) || url.startsWith("localhost");
+  });
+
+  return uniq(validUrls);
+};
+
 module.exports = {
   constructFormData,
   constructFormUpdateData,
   constructFormSubmissionData,
   constructNonceData,
   removeSiteProtocols,
+  getValidURLs,
   sanitizeForms,
   sanitizeSubmissions,
 };
