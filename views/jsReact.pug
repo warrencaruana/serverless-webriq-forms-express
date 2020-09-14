@@ -415,7 +415,7 @@ script.
       let body = await result.json();
 
       if(!body.success && body.score < 0.4) {
-        reject({ message: `✖ Please check "I'm not a robot" below to submit the form!` });
+        reject({ message: `✖ We're sorry but your computer or network may be sending automated queries. To protect our users, we can't process your request right now.` });
         return;
       }
 
