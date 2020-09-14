@@ -171,6 +171,14 @@ functions:
           method: GET
           path: "/js/initReactForms"
           cors: true
+  
+  siteVerify:
+    handler: index.handler
+    events:
+      - http:
+          method: POST
+          cors: true
+          path: "/siteVerify"
 
 plugins:
   - serverless-s3-local

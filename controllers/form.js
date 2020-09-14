@@ -3,6 +3,7 @@ const uniq = require("lodash.uniq");
 const uuidValidate = require("uuid-validate");
 const isEmpty = require("lodash.isempty");
 const JavaScriptObfuscator = require("javascript-obfuscator");
+var v3VerifyUrl = "https://www.google.com/recaptcha/api/siteverify";
 
 const { IS_OFFLINE } = require("../config/constants");
 
@@ -340,4 +341,31 @@ const generateNonce = () => {
     Math.random().toString(36).substring(2, 15) +
     Math.random().toString(36).substring(2, 15)
   );
+};
+
+/**
+ * POST /siteVerify
+ */
+exports.siteVerify = async (req, res) => {
+  try {
+    let body = req.body;
+
+    let result = await fetch(
+      v3VerifyUrl + "?secret=" + body.secret + "&response=" + body.token,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+    let bodyObj = await result.json();
+
+    return res.status(200).json(bodyObj);
+  } catch (err) {
+    return res.status(500).json({
+      error: "Invalid",
+      message: err && err.message,
+    });
+  }
 };

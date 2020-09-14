@@ -121,6 +121,7 @@ app.get("/logout", user.logout);
  */
 app.get("/js/initForms", form.getJSLib);
 app.get("/js/initReactForms", form.getReactJSLib);
+app.post("/siteVerify", form.siteVerify);
 
 // module.exports.handler = serverless(app);
 exports.handler = (event, context) => {

@@ -8,7 +8,7 @@ script.
   var dataId = 0;
   var sendingLabelShown = false;
   var isWebriQFormLoaded = true
-  var v3VerifyUrl = "https//www.goodle.com/recaptcha/api/siteverify";
+  var verifyUrl = "#{apiUrl}siteVerify";
 
   webriqFormInit();
 
@@ -18,15 +18,12 @@ script.
         var counter = 1;
         formIds = data;
 
-        console.log('data', data);
-
         var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
         recaptchaDivs.forEach(div => {
           if (! div.getAttribute("sitekey")) {
             div.setAttribute("sitekey", formIds[dataId].recaptcha.key);
           }
           if(! div.getAttribute("captchakey") && formIds[dataId].recaptcha.version == 'v3') {
-            console.log('here 123', formIds[dataId].recaptcha.secret);
             div.setAttribute("captchakey", formIds[dataId].recaptcha.secret);
           }
         });
@@ -403,9 +400,21 @@ script.
       var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
       var secret = recaptchaDivs[dataId].getAttribute("captchakey");
 
-      let result = await fetch(v3VerifyUrl + '?secret=' + secret + '&response=' + token);
+      let result = await fetch(verifyUrl, {
+        method: 'POST',
+        body: JSON.stringify({
+          secret: secret,
+          token: token
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
+      });
+      let body = await result.json();
 
-      if(!(result.ok && result.statusText == 'OK') ) {
+      if(!body.success && body.score < 0.4) {
         reject({ message: `✖ Please check "I'm not a robot" below to submit the form!` });
         return;
       }
