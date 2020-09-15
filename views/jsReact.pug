@@ -16,28 +16,33 @@ script.
     getAjax(getFormApiUrl)
       .then(data => {
         var counter = 1;
-        formIds = data;
+        formIds = data || [];
 
+        var forms = document.querySelectorAll("form[webriq]");
         var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
-        recaptchaDivs.forEach(div => {
+        recaptchaDivs.forEach((div, index) => {
           if (! div.getAttribute("sitekey")) {
-            div.setAttribute("sitekey", formIds[dataId].recaptcha.key);
+            div.setAttribute("sitekey", formIds[index].recaptcha.key);
           }
-          if(! div.getAttribute("captchakey") && formIds[dataId].recaptcha.version == 'v3') {
-            div.setAttribute("captchakey", formIds[dataId].recaptcha.secret);
+          if(! div.getAttribute("captchakey") && formIds[index].recaptcha.version == 'v3') {
+            div.setAttribute("captchakey", formIds[index].recaptcha.secret);
           }
         });
-
-        if (recaptchaDivs.length) {
-          if(formIds[dataId].recaptcha.version) {
-            if(formIds[dataId].recaptcha.version == 'v3') {
-              loadRecaptchaV3(formIds[dataId].recaptcha.key);
+        formIds.map( (formId, index) => {
+          if (recaptchaDivs.length) {
+            if(formIds[index].recaptcha.version) {
+              if(formIds[index].recaptcha.version == 'v3') {
+                if (! forms[index].getAttribute("sitekey")) {
+                  forms[index].setAttribute('data-recaptcha-version', 'v3');
+                }
+                loadRecaptchaV3(formIds[index].recaptcha.key);
+              }
+            } else {
+              //v2
+              loadRecaptchaV2(formIds[index].recaptcha.key);
             }
-          } else {
-            //v2
-            loadRecaptchaV2(formIds[dataId].recaptcha.key);
           }
-        }
+        })
 
         assignFormHandlers(formIds);
       })
@@ -73,7 +78,7 @@ script.
 
   function runCaptchaV3(e) {
     e.preventDefault();
-    var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+    var recaptchaDivs = document.querySelectorAll("form[webriq][data-recaptcha-version='v3'] .webriq-recaptcha");
     grecaptcha.execute(recaptchaDivs[0].getAttribute("sitekey"), {action: 'submit'}).then( token => {
       if(token) {
         formSubmitHandlerV3(e, token);
@@ -189,8 +194,6 @@ script.
     const formId = singleForm.hasAttribute("data-form-id") ? singleForm.getAttribute("data-form-id") : formIds[0] && formIds[0].id;
     const postFormApiUrl = webriqFormsApiUrl + formId + "/submissions";
 
-
-    console.log('submit', singleForm.hasAttribute("data-form-id"));
     // When testing, data-form-id attribute must be specified
     if ( location && location.hostname === "localhost" && ! singleForm.hasAttribute("data-form-id")) {
       console.error(`WebriQ Forms: When testing forms in localhost, make sure to specify the form ID in the form 'data-form-id' attribute. See ${webriqFormsDocsUrl} for more info.`);
@@ -276,10 +279,9 @@ script.
 
   function assignFormHandlers(formIds) {
     var forms = document.querySelectorAll("form[webriq]");
-
     forms.forEach(function(singleForm, singleFormIndex) {
-      if(formIds[dataId].recaptcha.version) {
-        if(formIds[dataId].recaptcha.version == 'v3') {
+      if(formIds[singleFormIndex].recaptcha.version) {
+        if(formIds[singleFormIndex].recaptcha.version == 'v3') {
           singleForm.removeEventListener("submit", runCaptchaV3);
           singleForm.addEventListener("submit", runCaptchaV3);
         }
@@ -291,7 +293,6 @@ script.
   }
 
   function loadRecaptchaV3(sitekey) {
-    if (!document.getElementById("webriqFormRecaptcha")) {
       let scriptTag = document.createElement("script");
       let headTag = document.querySelector("head");
       scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js?onload=renderCaptchaV3&render=" + sitekey);
@@ -299,11 +300,10 @@ script.
       scriptTag.setAttribute("defer", "");
       scriptTag.setAttribute("id", "webriqFormRecaptcha");
       headTag.parentNode.insertBefore(scriptTag, headTag.nextSibling);
-    }
   }
 
   function loadRecaptchaV2(sitekey) {
-    if (!document.getElementById("webriqFormRecaptcha")) {
+    //- if (!document.getElementById("webriqFormRecaptcha")) {
       let scriptTag = document.createElement("script");
       let headTag = document.querySelector("head");
       scriptTag.setAttribute("src", "https://www.google.com/recaptcha/api.js?onload=renderCaptchaV2&render=explicit");
@@ -311,16 +311,15 @@ script.
       scriptTag.setAttribute("defer", "");
       scriptTag.setAttribute("id", "webriqFormRecaptcha");
       headTag.parentNode.insertBefore(scriptTag, headTag.nextSibling);
-    }
+    //- }
   }
 
   function renderCaptchaV3() {
-    var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+    var recaptchaDivs = document.querySelectorAll("form[webriq][data-recaptcha-version='v3'] .webriq-recaptcha");
     var button = document.querySelectorAll("form[webriq] button");
     recaptchaDivs.forEach((div, index) => {
       // Explicitly call our recaptcha to render back
       let currentSiteKey = div.getAttribute("sitekey");
-      console.log('current site key', currentSiteKey);
       button[index].setAttribute('data-sitekey', currentSiteKey);
       button[index].setAttribute('class', 'g-recaptcha');
       button[index].setAttribute('data-action', 'submit');
@@ -328,7 +327,7 @@ script.
   }
 
   function renderCaptchaV2() {
-    var recaptchaDivs = document.querySelectorAll("form[webriq] .webriq-recaptcha");
+    var recaptchaDivs = document.querySelectorAll("form[webriq]:not([data-recaptcha-version='v3']) .webriq-recaptcha");
 
     recaptchaDivs.forEach(div => {
       // Explicitly call our recaptcha to render back

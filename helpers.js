@@ -16,18 +16,22 @@ const constructFormData = (data) => {
     testUrls: get(data, "testUrls", []),
     tags: get(data, "tags", []),
     recaptcha: {
-      version: get(data, "recaptcha.version"),
+      version: get(
+        data,
+        "recaptcha.version",
+        (data.recaptcha && data.recaptcha.version) || null
+      ),
       key: get(
         data,
         "recaptcha.key",
-        data.recaptcha.version == "v3"
+        data.recaptcha && data.recaptcha.version == "v3"
           ? process.env.APP_V3_RECAPTCHA_KEY
           : process.env.APP_DEFAULT_RECAPTCHA_KEY
       ),
       secret: get(
         data,
         "recaptcha.secret",
-        data.recaptcha.version == "v3"
+        data.recaptcha && data.recaptcha.version == "v3"
           ? process.env.APP_V3_RECAPTCHA_SECRET
           : process.env.APP_DEFAULT_RECAPTCHA_SECRET
       ),
