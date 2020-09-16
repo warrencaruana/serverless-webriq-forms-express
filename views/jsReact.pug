@@ -318,7 +318,6 @@ script.
     var recaptchaDivs = document.querySelectorAll("form[webriq][data-recaptcha-version='v3'] .webriq-recaptcha");
     var button = document.querySelectorAll("form[webriq] button");
     recaptchaDivs.forEach((div, index) => {
-      // Explicitly call our recaptcha to render back
       let currentSiteKey = div.getAttribute("sitekey");
       button[index].setAttribute('data-sitekey', currentSiteKey);
       button[index].setAttribute('class', 'g-recaptcha');
